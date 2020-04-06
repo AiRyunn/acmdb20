@@ -187,7 +187,6 @@ public class TupleDesc implements Serializable {
             types[i + td1.numFields()] = td2.getFieldType(i);
             names[i + td1.numFields()] = td2.getFieldName(i);
         }
-        // some code goes here
         return new TupleDesc(types, names);
     }
 

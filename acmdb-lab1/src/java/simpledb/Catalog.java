@@ -181,6 +181,7 @@ public class Catalog {
                 addTable(tabHf, name, primaryKey);
                 System.out.println("Added table : " + name + " with schema " + t);
             }
+            br.close();
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(0);

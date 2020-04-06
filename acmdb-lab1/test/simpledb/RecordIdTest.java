@@ -16,7 +16,8 @@ public class RecordIdTest extends SimpleDbTestBase {
     private static RecordId hrid3;
     private static RecordId hrid4;
 
-    @Before public void createPids() {
+    @Before
+    public void createPids() {
         HeapPageId hpid = new HeapPageId(-1, 2);
         HeapPageId hpid2 = new HeapPageId(-1, 2);
         HeapPageId hpid3 = new HeapPageId(-2, 2);
@@ -30,36 +31,39 @@ public class RecordIdTest extends SimpleDbTestBase {
     /**
      * Unit test for RecordId.getPageId()
      */
-    @Test public void getPageId() {
+    @Test
+    public void getPageId() {
         HeapPageId hpid = new HeapPageId(-1, 2);
         assertEquals(hpid, hrid.getPageId());
-
     }
 
     /**
      * Unit test for RecordId.tupleno()
      */
-    @Test public void tupleno() {
+    @Test
+    public void tupleno() {
         assertEquals(3, hrid.tupleno());
     }
-    
+
     /**
      * Unit test for RecordId.equals()
      */
-    @Test public void equals() {
-    	assertEquals(hrid, hrid2);
-    	assertEquals(hrid2, hrid);
-    	assertFalse(hrid.equals(hrid3));
-    	assertFalse(hrid3.equals(hrid));
-    	assertFalse(hrid2.equals(hrid4));
-    	assertFalse(hrid4.equals(hrid2));
+    @Test
+    public void equals() {
+        assertEquals(hrid, hrid2);
+        assertEquals(hrid2, hrid);
+        assertFalse(hrid.equals(hrid3));
+        assertFalse(hrid3.equals(hrid));
+        assertFalse(hrid2.equals(hrid4));
+        assertFalse(hrid4.equals(hrid2));
     }
-    
+
     /**
      * Unit test for RecordId.hashCode()
      */
-    @Test public void hCode() {
-    	assertEquals(hrid.hashCode(), hrid2.hashCode());
+    @Test
+    public void hCode() {
+        assertEquals(hrid.hashCode(), hrid2.hashCode());
     }
 
     /**
@@ -69,4 +73,3 @@ public class RecordIdTest extends SimpleDbTestBase {
         return new JUnit4TestAdapter(RecordIdTest.class);
     }
 }
-

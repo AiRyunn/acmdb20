@@ -10,5 +10,5 @@ stages:
     steps:
     - script: sudo apt update && sudo apt install openjdk-8-jdk && sudo apt install ant
       displayName: Install dependency
-    - script: export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 && cd acmdb-lab0 && ant clean && ant test && ant systemtest
+    - script: export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 && cd acmdb-lab1 && ant clean && ant test && ant systemtest
       displayName: Run test and system test

@@ -8,7 +8,6 @@ import java.util.*;
  * disk).
  */
 public class SeqScan implements DbIterator {
-
     private static final long serialVersionUID = 1L;
 
     private final TransactionId transId;

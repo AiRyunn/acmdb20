@@ -14,7 +14,6 @@ import java.util.*;
  * @author Sam Madden
  */
 public class HeapFile implements DbFile {
-
     private final File file;
     private final TupleDesc td;
 
@@ -119,10 +118,11 @@ public class HeapFile implements DbFile {
     }
 
     class HeapFileIterator extends AbstractDbFileIterator {
-        Iterator<Tuple> tupleIt;
-        int currentPageNumber;
-        TransactionId tid;
-        HeapFile heapFile;
+        private final HeapFile heapFile;
+        private final TransactionId tid;
+
+        private Iterator<Tuple> tupleIt;
+        private int currentPageNumber;
 
         public HeapFileIterator(HeapFile hf, TransactionId tid) {
             this.heapFile = hf;
@@ -139,7 +139,6 @@ public class HeapFile implements DbFile {
                 tupleIt = null;
             }
 
-            // Keep trying to open a tuple iterator until we find one of run out of pages.
             while (tupleIt == null && currentPageNumber < heapFile.numPages() - 1) {
                 currentPageNumber++;
 

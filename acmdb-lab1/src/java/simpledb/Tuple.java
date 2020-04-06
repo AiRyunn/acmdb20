@@ -48,7 +48,7 @@ public class Tuple implements Serializable {
     }
 
     /**
-     * Set the RecordId information for this tuple.
+    * Set the RecordId information for this tuple.
      *
      * @param rid
      *            the new RecordId for this tuple.

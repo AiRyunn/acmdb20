@@ -12,7 +12,6 @@ import java.io.*;
  *
  */
 public class HeapPage implements Page {
-
     final HeapPageId pid;
     final TupleDesc td;
     final byte header[];

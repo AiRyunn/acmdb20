@@ -2,7 +2,6 @@ package simpledb;
 
 import java.io.*;
 import java.util.*;
-import java.nio.channels.FileChannel;
 
 import simpledb.Predicate.Op;
 
@@ -194,7 +193,7 @@ public class BTreeFile implements DbFile {
         if (pid.pgcateg() == BTreePageId.LEAF) {
             return (BTreeLeafPage) this.getPage(tid, dirtypages, pid, perm);
         }
-        BTreeInternalPage page = (BTreeInternalPage) this.getPage(tid, dirtypages, pid, perm);
+        BTreeInternalPage page = (BTreeInternalPage) this.getPage(tid, dirtypages, pid, Permissions.READ_ONLY);
 
         BTreeEntry entry = null;
         for (Iterator<BTreeEntry> it = page.iterator(); it.hasNext();) {
@@ -584,7 +583,7 @@ public class BTreeFile implements DbFile {
         if (rightEntry != null)
             rightSiblingId = rightEntry.getRightChild();
 
-        int maxEmptySlots = page.getMaxTuples() - page.getMaxTuples() / 2; // ceiling
+        int maxEmptySlots = (page.getMaxTuples() + 1) / 2; // ceiling
         if (leftSiblingId != null) {
             BTreeLeafPage leftSibling = (BTreeLeafPage) getPage(tid, dirtypages, leftSiblingId, Permissions.READ_WRITE);
             // if the left sibling is at minimum occupancy, merge with it. Otherwise
@@ -639,6 +638,7 @@ public class BTreeFile implements DbFile {
         if (isRightSibling) {
             tuple = it.next();
         }
+
         entry.setKey(tuple.getField(this.keyField));
         parent.updateEntry(entry);
     }
@@ -667,12 +667,14 @@ public class BTreeFile implements DbFile {
             throws DbException, IOException, TransactionAbortedException {
         BTreePageId leftSiblingId = null;
         BTreePageId rightSiblingId = null;
-        if (leftEntry != null)
+        if (leftEntry != null) {
             leftSiblingId = leftEntry.getLeftChild();
-        if (rightEntry != null)
+        }
+        if (rightEntry != null) {
             rightSiblingId = rightEntry.getRightChild();
+        }
 
-        int maxEmptySlots = page.getMaxEntries() - page.getMaxEntries() / 2; // ceiling
+        int maxEmptySlots = (page.getMaxEntries() + 1) / 2; // ceiling
         if (leftSiblingId != null) {
             BTreeInternalPage leftSibling = (BTreeInternalPage) getPage(tid, dirtypages, leftSiblingId,
                     Permissions.READ_WRITE);
@@ -725,6 +727,7 @@ public class BTreeFile implements DbFile {
         BTreeEntry entry = page.iterator().next();
         for (int i = 0; i < count; i++) {
             siblingEntry = it.next();
+
             parent.deleteKeyAndRightChild(parentEntry);
             parentEntry.setLeftChild(siblingEntry.getRightChild());
             parentEntry.setRightChild(entry.getLeftChild());
@@ -785,6 +788,9 @@ public class BTreeFile implements DbFile {
             parent.insertEntry(siblingEntry);
             parentEntry = siblingEntry;
         }
+        // parent.markDirty(true, tid);
+        // page.markDirty(true, tid);
+        // rightSibling.markDirty(true, tid);
         this.updateParentPointers(tid, dirtypages, page);
     }
 
@@ -908,7 +914,7 @@ public class BTreeFile implements DbFile {
         // the parent is below minimum occupancy, get some tuples from its siblings
         // or merge with one of the siblings
         parent.deleteKeyAndRightChild(parentEntry);
-        int maxEmptySlots = parent.getMaxEntries() - parent.getMaxEntries() / 2; // ceiling
+        int maxEmptySlots = (parent.getMaxEntries() + 1) / 2; // ceiling
         if (parent.getNumEmptySlots() == parent.getMaxEntries()) {
             // This was the last entry in the parent.
             // In this case, the parent (root node) should be deleted, and the merged 
@@ -949,7 +955,7 @@ public class BTreeFile implements DbFile {
 
         // if the page is below minimum occupancy, get some tuples from its siblings
         // or merge with one of the siblings
-        int maxEmptySlots = page.getMaxTuples() - page.getMaxTuples() / 2; // ceiling
+        int maxEmptySlots = (page.getMaxTuples() + 1) / 2; // ceiling
         if (page.getNumEmptySlots() > maxEmptySlots) {
             handleMinOccupancyPage(tid, dirtypages, page);
         }
@@ -1236,8 +1242,9 @@ class BTreeFileIterator extends AbstractDbFileIterator {
      */
     @Override
     protected Tuple readNext() throws TransactionAbortedException, DbException {
-        if (it != null && !it.hasNext())
+        if (it != null && !it.hasNext()) {
             it = null;
+        }
 
         while (it == null && curp != null) {
             BTreePageId nextp = curp.getRightSiblingId();
@@ -1246,13 +1253,15 @@ class BTreeFileIterator extends AbstractDbFileIterator {
             } else {
                 curp = (BTreeLeafPage) Database.getBufferPool().getPage(tid, nextp, Permissions.READ_ONLY);
                 it = curp.iterator();
-                if (!it.hasNext())
+                if (!it.hasNext()) {
                     it = null;
+                }
             }
         }
 
-        if (it == null)
+        if (it == null) {
             return null;
+        }
         return it.next();
     }
 

@@ -40,9 +40,13 @@ public class BTreeFileDeleteTest extends SimpleDbTestBase {
         it.open();
         while (it.hasNext()) {
             Tuple t = it.next();
+            // f.test(tid, t);
             f.deleteTuple(tid, t);
+            // f.test2(tid, t);
         }
         it.rewind();
+        // Tuple t = it.next();
+        // f.test(tid, t);
         assertFalse(it.hasNext());
 
         // insert a couple of tuples

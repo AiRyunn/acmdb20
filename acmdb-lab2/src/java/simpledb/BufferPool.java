@@ -76,9 +76,6 @@ public class BufferPool {
         if (page != null) {
             return page;
         }
-        // System.out.println("okok");
-        // System.out.println(cache.size());
-        // System.out.println(numPages);
         if (cache.size() >= numPages) {
             evictPage();
         }
@@ -155,7 +152,7 @@ public class BufferPool {
         for (Page page : pageList) {
             PageId pid = page.getId();
             cache.put(pid, page);
-            cache.get(pid).markDirty(true, tid);
+            page.markDirty(true, tid);
         }
     }
 
@@ -180,7 +177,7 @@ public class BufferPool {
         for (Page page : pageList) {
             PageId pid = page.getId();
             cache.put(pid, page);
-            cache.get(pid).markDirty(true, tid);
+            page.markDirty(true, tid);
         }
     }
 
@@ -206,7 +203,7 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
-        // cache.remove(pid);
+        cache.remove(pid);
     }
 
     /**
@@ -240,14 +237,23 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         PageId id = null;
+        boolean isDirty = true;
         for (Iterator<PageId> it = this.cache.keySet().iterator(); it.hasNext();) {
             id = it.next();
-            if (this.cache.get(id).isDirty() != null) {
+            if (this.cache.get(id).isDirty() == null) {
+                isDirty = false;
                 break;
             }
         }
 
-        assert id != null;
+        if (isDirty) {
+            try {
+                assert false;
+                flushPage(id);
+            } catch (Exception e) {
+                throw new DbException("unable to evict page");
+            }
+        }
 
         this.discardPage(id);
     }

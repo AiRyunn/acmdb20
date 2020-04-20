@@ -287,7 +287,6 @@ public class BTreeLeafPage extends BTreePage {
      */
     public void deleteTuple(Tuple t) throws DbException {
         RecordId rid = t.getRecordId();
-        // System.out.println(rid.tupleno());
         if (rid == null) {
             throw new DbException("tried to delete tuple with null rid");
         }

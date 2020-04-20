@@ -1,1 +1,7 @@
+ 
+/.vscode/
 bin/
+dist/
+.classpath
+.project
+log

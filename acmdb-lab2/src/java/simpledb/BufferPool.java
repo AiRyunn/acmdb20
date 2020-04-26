@@ -2,8 +2,6 @@ package simpledb;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -17,12 +15,40 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Threadsafe, all fields are final
  */
 public class BufferPool {
+    private static int timestamp = 0;
+
+    private class PageWithPriority implements Comparable<PageWithPriority> {
+        private final Page page;
+        private final PageId pid;
+        private Integer priority;
+
+        private PageWithPriority(Page page, PageId pid) {
+            this.page = page;
+            this.pid = pid;
+            this.priority = timestamp++;
+        }
+
+        private Integer getPriority() {
+            return priority;
+        }
+
+        private void flush() {
+            this.priority = timestamp++;
+        }
+
+        @Override
+        public int compareTo(PageWithPriority other) {
+            return this.priority.compareTo(other.getPriority());
+        }
+
+    }
+
     /** Bytes per page, including header. */
     private static final int PAGE_SIZE = 4096;
 
     private static int pageSize = PAGE_SIZE;
 
-    private final ConcurrentHashMap<PageId, Page> cache;
+    private final ArrayList<PageWithPriority> pages;
     private final int numPages;
 
     /** Default number of pages passed to the constructor. This is used by
@@ -37,7 +63,7 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // some code goes here
-        this.cache = new ConcurrentHashMap<PageId, Page>();
+        this.pages = new ArrayList<PageWithPriority>();
         this.numPages = numPages;
     }
 
@@ -72,16 +98,16 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        Page page = cache.get(pid);
-        if (page != null) {
-            return page;
+        PageWithPriority p = findPage(pid);
+        if (p != null) {
+            return p.page;
         }
-        if (cache.size() >= numPages) {
+        if (pages.size() >= numPages) {
             evictPage();
         }
         DbFile dbfile = Database.getCatalog().getDatabaseFile(pid.getTableId());
-        page = dbfile.readPage(pid);
-        cache.put(pid, page);
+        Page page = dbfile.readPage(pid);
+        this.addPage(pid, page);
         return page;
     }
 
@@ -151,7 +177,7 @@ public class BufferPool {
         ArrayList<Page> pageList = file.insertTuple(tid, t);
         for (Page page : pageList) {
             PageId pid = page.getId();
-            cache.put(pid, page);
+            this.addPage(pid, page);
             page.markDirty(true, tid);
         }
     }
@@ -176,7 +202,7 @@ public class BufferPool {
         ArrayList<Page> pageList = file.deleteTuple(tid, t);
         for (Page page : pageList) {
             PageId pid = page.getId();
-            cache.put(pid, page);
+            addPage(pid, page);
             page.markDirty(true, tid);
         }
     }
@@ -189,7 +215,18 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
         // not necessary for lab1
+        for (PageWithPriority p : this.pages) {
+            flushPage(p.pid);
+        }
+    }
 
+    private synchronized void addPage(PageId pid, Page page) {
+        PageWithPriority p = findPage(pid);
+        if (p != null) {
+            p.flush();
+        } else {
+            this.pages.add(new PageWithPriority(page, pid));
+        }
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -203,7 +240,7 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
-        cache.remove(pid);
+        this.pages.remove(findPage(pid));
     }
 
     /**
@@ -213,7 +250,7 @@ public class BufferPool {
     private synchronized void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
-        Page page = this.cache.get(pid);
+        Page page = findPage(pid).page;
         TransactionId id = page.isDirty();
         if (id != null) {
             DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
@@ -234,28 +271,43 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized void evictPage() throws DbException {
-        // some code goes here
-        // not necessary for lab1
-        PageId id = null;
-        boolean isDirty = true;
-        for (Iterator<PageId> it = this.cache.keySet().iterator(); it.hasNext();) {
-            id = it.next();
-            if (this.cache.get(id).isDirty() == null) {
-                isDirty = false;
-                break;
+        PageWithPriority flushPage = null, dirtyPage = null;
+
+        for (PageWithPriority p : this.pages) {
+            if (p.page.isDirty() == null) {
+                if (flushPage == null || p.compareTo(flushPage) < 0) {
+                    flushPage = p;
+                }
+            } else {
+                if (dirtyPage == null || p.compareTo(dirtyPage) < 0) {
+                    dirtyPage = p;
+                }
             }
         }
 
-        if (isDirty) {
+        // NOTE: assert for test
+        assert flushPage != null;
+
+        if (flushPage == null) {
+            flushPage = dirtyPage;
             try {
-                assert false;
-                flushPage(id);
+                flushPage(dirtyPage.pid);
             } catch (Exception e) {
-                throw new DbException("unable to evict page");
+                throw new DbException("unable to evice page");
             }
         }
 
-        this.discardPage(id);
+        assert flushPage != null;
+
+        this.discardPage(flushPage.pid);
     }
 
+    private synchronized PageWithPriority findPage(PageId pid) {
+        for (PageWithPriority p : this.pages) {
+            if (p.pid.equals(pid)) {
+                return p;
+            }
+        }
+        return null;
+    }
 }

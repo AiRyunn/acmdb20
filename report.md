@@ -33,7 +33,7 @@ CJKmainfont: 思源黑体 CN
 
 * Describe how long you spent on the lab, and whether there was anything you found particularly difficult or confusing.
 
-   7 days.
+   7 days. The most difficult part is maintaining the B+ tree. It's a tedious work but worth doing.
 
 # Report of Lab1
 

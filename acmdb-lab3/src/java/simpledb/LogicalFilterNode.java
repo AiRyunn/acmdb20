@@ -12,24 +12,24 @@ public class LogicalFilterNode {
 
     /** The predicate in the filter */
     public Predicate.Op p;
-    
+
     /* The constant on the right side of the filter */
     public String c;
-    
+
     /** The field from t which is in the filter. The pure name, without alias or tablename*/
     public String fieldPureName;
-    
+
     public String fieldQuantifiedName;
-    
+
     public LogicalFilterNode(String table, String field, Predicate.Op pred, String constant) {
         tableAlias = table;
         p = pred;
         c = constant;
         String[] tmps = field.split("[.]");
-        if (tmps.length>1)
-            fieldPureName = tmps[tmps.length-1];
+        if (tmps.length > 1)
+            fieldPureName = tmps[tmps.length - 1];
         else
-            fieldPureName=field;
-        this.fieldQuantifiedName = tableAlias+"."+fieldPureName;
+            fieldPureName = field;
+        this.fieldQuantifiedName = tableAlias + "." + fieldPureName;
     }
 }

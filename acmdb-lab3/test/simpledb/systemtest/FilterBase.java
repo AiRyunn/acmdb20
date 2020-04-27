@@ -19,8 +19,8 @@ public abstract class FilterBase extends SimpleDbTestBase {
             throws DbException, TransactionAbortedException, IOException;
 
     /** Optional hook for validating database state after applyPredicate. */
-    protected void validateAfter(HeapFile table)
-            throws DbException, TransactionAbortedException, IOException {}
+    protected void validateAfter(HeapFile table) throws DbException, TransactionAbortedException, IOException {
+    }
 
     protected ArrayList<ArrayList<Integer>> createdTuples;
 
@@ -32,8 +32,8 @@ public abstract class FilterBase extends SimpleDbTestBase {
         return result;
     }
 
-    private void validatePredicate(int column, int columnValue, int trueValue, int falseValue,
-            Predicate.Op operation) throws IOException, DbException, TransactionAbortedException {
+    private void validatePredicate(int column, int columnValue, int trueValue, int falseValue, Predicate.Op operation)
+            throws IOException, DbException, TransactionAbortedException {
         // Test the true value
         HeapFile f = createTable(column, columnValue);
         Predicate predicate = new Predicate(column, operation, new IntField(trueValue));
@@ -54,32 +54,31 @@ public abstract class FilterBase extends SimpleDbTestBase {
         Map<Integer, Integer> columnSpecification = new HashMap<Integer, Integer>();
         columnSpecification.put(column, columnValue);
         createdTuples = new ArrayList<ArrayList<Integer>>();
-        return SystemTestUtil.createRandomHeapFile(
-                COLUMNS, ROWS, columnSpecification, createdTuples);
+        return SystemTestUtil.createRandomHeapFile(COLUMNS, ROWS, columnSpecification, createdTuples);
     }
 
-    @Test public void testEquals() throws
-            DbException, TransactionAbortedException, IOException {
+    @Test
+    public void testEquals() throws DbException, TransactionAbortedException, IOException {
         validatePredicate(0, 1, 1, 2, Predicate.Op.EQUALS);
     }
 
-    @Test public void testLessThan() throws
-            DbException, TransactionAbortedException, IOException {
+    @Test
+    public void testLessThan() throws DbException, TransactionAbortedException, IOException {
         validatePredicate(1, 1, 2, 1, Predicate.Op.LESS_THAN);
     }
 
-    @Test public void testLessThanOrEq() throws
-            DbException, TransactionAbortedException, IOException {
+    @Test
+    public void testLessThanOrEq() throws DbException, TransactionAbortedException, IOException {
         validatePredicate(2, 42, 42, 41, Predicate.Op.LESS_THAN_OR_EQ);
     }
 
-    @Test public void testGreaterThan() throws
-            DbException, TransactionAbortedException, IOException {
+    @Test
+    public void testGreaterThan() throws DbException, TransactionAbortedException, IOException {
         validatePredicate(2, 42, 41, 42, Predicate.Op.GREATER_THAN);
     }
 
-    @Test public void testGreaterThanOrEq() throws
-            DbException, TransactionAbortedException, IOException {
+    @Test
+    public void testGreaterThanOrEq() throws DbException, TransactionAbortedException, IOException {
         validatePredicate(2, 42, 42, 43, Predicate.Op.GREATER_THAN_OR_EQ);
     }
 }

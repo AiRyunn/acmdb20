@@ -8,7 +8,7 @@ public class LogicalSelectListNode {
      * qualified with a table name or alias.
      */
     public String fname;
-   
+
     /** The aggregation operation over the field (if any) */
     public String aggOp;
 

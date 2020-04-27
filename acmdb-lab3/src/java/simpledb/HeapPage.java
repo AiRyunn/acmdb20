@@ -12,6 +12,9 @@ import java.io.*;
  *
  */
 public class HeapPage implements Page {
+    protected volatile boolean dirty = false;
+    protected volatile TransactionId dirtier = null;
+
     final HeapPageId pid;
     final TupleDesc td;
     final byte header[];
@@ -241,11 +244,12 @@ public class HeapPage implements Page {
     public void deleteTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
-        if (!this.pid.equals(t.getRecordId().getPageId())) {
+        RecordId rid = t.getRecordId();
+        if (!this.pid.equals(rid.getPageId())) {
             throw new DbException("this tuple is not on this page");
         }
 
-        int tupleno = t.getRecordId().tupleno();
+        int tupleno = rid.tupleno();
 
         if (!(this.isSlotUsed(tupleno))) {
             throw new DbException("tuple slot is already empty");
@@ -289,6 +293,10 @@ public class HeapPage implements Page {
     public void markDirty(boolean dirty, TransactionId tid) {
         // some code goes here
         // not necessary for lab1
+        this.dirty = dirty;
+        if (dirty) {
+            this.dirtier = tid;
+        }
     }
 
     /**
@@ -297,7 +305,11 @@ public class HeapPage implements Page {
     public TransactionId isDirty() {
         // some code goes here
         // Not necessary for lab1
-        return null;
+        if (this.dirty) {
+            return this.dirtier;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -334,6 +346,15 @@ public class HeapPage implements Page {
     private void markSlotUsed(int i, boolean value) {
         // some code goes here
         // not necessary for lab1
+        int headerbit = i % 8;
+        int headerbyte = (i - headerbit) / 8;
+
+        Debug.log(1, "HeapPagePage.setSlot: setting slot %d to %b", i, value);
+        if (value) {
+            header[headerbyte] |= 1 << headerbit;
+        } else {
+            header[headerbyte] &= (0xFF ^ (1 << headerbit));
+        }
     }
 
     /**

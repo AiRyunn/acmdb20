@@ -118,4 +118,19 @@ public class Tuple implements Serializable {
         this.td = td;
         fields = new Field[td.numFields()];
     }
+
+    public static Tuple merge(Tuple t1, Tuple t2) {
+        TupleDesc td1 = t1.getTupleDesc(), td2 = t2.getTupleDesc();
+        Tuple t = new Tuple(TupleDesc.merge(td1, td2));
+
+        int pos = 0;
+        for (int i = 0; i < td1.numFields(); i++) {
+            t.setField(pos++, t1.getField(i));
+        }
+        for (int j = 0; j < td2.numFields(); j++) {
+            t.setField(pos++, t2.getField(j));
+        }
+
+        return t;
+    }
 }

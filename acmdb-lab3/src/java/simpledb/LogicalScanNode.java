@@ -16,4 +16,3 @@ public class LogicalScanNode {
         this.t = table;
     }
 }
-

@@ -12,20 +12,22 @@ public abstract class Operator implements DbIterator {
     private static final long serialVersionUID = 1L;
 
     public boolean hasNext() throws DbException, TransactionAbortedException {
-        if (!this.open)
+        if (!this.open) {
             throw new IllegalStateException("Operator not yet open");
-        
-        if (next == null)
+        }
+
+        if (next == null) {
             next = fetchNext();
+        }
         return next != null;
     }
 
-    public Tuple next() throws DbException, TransactionAbortedException,
-            NoSuchElementException {
+    public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
         if (next == null) {
             next = fetchNext();
-            if (next == null)
+            if (next == null) {
                 throw new NoSuchElementException();
+            }
         }
 
         Tuple result = next;
@@ -41,8 +43,7 @@ public abstract class Operator implements DbIterator {
      * @return the next Tuple in the iterator, or null if the iteration is
      *         finished.
      */
-    protected abstract Tuple fetchNext() throws DbException,
-            TransactionAbortedException;
+    protected abstract Tuple fetchNext() throws DbException, TransactionAbortedException;
 
     /**
      * Closes this iterator. If overridden by a subclass, they should call

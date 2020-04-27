@@ -100,15 +100,28 @@ public class HeapFile implements DbFile {
     public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        HeapPage page = getPage(tid, Permissions.READ_WRITE);
+
+        if (page != null) {
+            page.insertTuple(t);
+            return new ArrayList<Page>(Arrays.asList(page));
+        }
+
+        page = getEmptyPage(tid);
+        page.insertTuple(t);
+
+        return new ArrayList<Page>(Arrays.asList(page));
     }
 
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException, TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        PageId pid = t.getRecordId().getPageId();
+        HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+        page.deleteTuple(t);
+        return new ArrayList<Page>(Arrays.asList(page));
     }
 
     // see DbFile.java for javadocs
@@ -170,5 +183,31 @@ public class HeapFile implements DbFile {
             tupleIt = null;
             currentPageNumber = Integer.MAX_VALUE;
         }
+
+    }
+
+    private HeapPage getPage(TransactionId tid, Permissions perm) throws TransactionAbortedException, DbException {
+        for (int i = 0; i < this.numPages(); i++) {
+            PageId pid = new HeapPageId(this.getId(), i);
+            HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, perm);
+            if (page.getNumEmptySlots() > 0) {
+                return page;
+            }
+        }
+        return null;
+    }
+
+    private HeapPage getEmptyPage(TransactionId tid) throws DbException, IOException, TransactionAbortedException {
+        HeapPageId id = new HeapPageId(this.getId(), this.numPages());
+        byte[] data = HeapPage.createEmptyPageData();
+
+        RandomAccessFile raf = new RandomAccessFile(this.file, "rw");
+        raf.seek(BufferPool.getPageSize() * this.numPages());
+        raf.write(data);
+        raf.close();
+
+        Database.getBufferPool().discardPage(id);
+
+        return getPage(tid, Permissions.READ_WRITE);
     }
 }

@@ -33,28 +33,24 @@ public class OrderBy extends Operator {
         this.orderByFieldName = td.getFieldName(orderbyField);
         this.asc = asc;
     }
-    
-    public boolean isASC()
-    {
-	return this.asc;
+
+    public boolean isASC() {
+        return this.asc;
     }
-    
-    public int getOrderByField()
-    {
+
+    public int getOrderByField() {
         return this.orderByField;
     }
-    
-    public String getOrderFieldName()
-    {
-	return this.orderByFieldName;
+
+    public String getOrderFieldName() {
+        return this.orderByFieldName;
     }
-    
+
     public TupleDesc getTupleDesc() {
         return td;
     }
 
-    public void open() throws DbException, NoSuchElementException,
-            TransactionAbortedException {
+    public void open() throws DbException, NoSuchElementException, TransactionAbortedException {
         child.open();
         // load all the tuples in a collection, and sort it
         while (child.hasNext())
@@ -80,8 +76,7 @@ public class OrderBy extends Operator {
      * @return The next tuple in the ordering, or null if there are no more
      *         tuples
      */
-    protected Tuple fetchNext() throws NoSuchElementException,
-            TransactionAbortedException, DbException {
+    protected Tuple fetchNext() throws NoSuchElementException, TransactionAbortedException, DbException {
         if (it != null && it.hasNext()) {
             return it.next();
         } else
@@ -119,5 +114,5 @@ class TupleComparator implements Comparator<Tuple> {
         else
             return asc ? -1 : 1;
     }
-    
+
 }

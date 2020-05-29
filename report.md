@@ -1,6 +1,6 @@
 ---
 title: "Report of Labs"
-date: Apr 26, 2020
+date: May 30, 2020
 
 geometry: margin = 1in
 
@@ -10,6 +10,24 @@ output:
         template: /usr/share/pandoc/data/templates/default.latex
 CJKmainfont: 思源黑体 CN
 ---
+
+# Report of Lab4
+
+* Describe any design decisions you made, including methods for selectivity estimation, join ordering.
+
+  None.
+
+* Discuss and justify any changes you made to the API.
+
+  None.
+
+* Describe any missing or incomplete elements of your code.
+  
+  None.
+
+* Describe how long you spent on the lab, and whether there was anything you found particularly difficult or confusing.
+
+   3 days.
 
 # Report of Lab2
 

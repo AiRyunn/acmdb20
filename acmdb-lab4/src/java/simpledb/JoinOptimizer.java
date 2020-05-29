@@ -108,7 +108,7 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic
             // nested-loops join.
-            return -1.0;
+            return cost1 + card1 * cost2 + card1 * card2;
         }
     }
 
@@ -151,6 +151,34 @@ public class JoinOptimizer {
             Map<String, TableStats> stats, Map<String, Integer> tableAliasToId) {
         int card = 1;
         // some code goes here
+        switch (joinOp) {
+            case EQUALS:
+            case NOT_EQUALS:
+            case LIKE:
+                if (t1pkey && !t2pkey) {
+                    card = card2;
+                } else if (t2pkey && !t1pkey) {
+                    card = card1;
+                } else {
+                    card = card1 > card2 ? card1 : card2;
+                }
+
+                if (joinOp == Predicate.Op.LIKE) {
+                    card = 2 * card;
+                } else if (joinOp == Predicate.Op.NOT_EQUALS) {
+                    card = card1 * card2 - card;
+                }
+                break;
+            case GREATER_THAN:
+            case LESS_THAN:
+            case LESS_THAN_OR_EQ:
+            case GREATER_THAN_OR_EQ:
+                card = (int) (0.3 * card1 * card2);
+                break;
+            default:
+                assert false;
+        }
+
         return card <= 0 ? 1 : card;
     }
 
@@ -213,7 +241,36 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
-        return joins;
+        Set<LogicalJoinNode> joinSet = new HashSet<LogicalJoinNode>();
+        joinSet.addAll(this.joins);
+        Set<Set<LogicalJoinNode>> sets = enumerateSubsets(this.joins, 1);
+        PlanCache optjoin = new PlanCache();
+
+        for (int i = 1; i <= sets.size(); i++) {
+            for (Set<LogicalJoinNode> set : this.enumerateSubsets(joins, i)) {
+                CostCard best = new CostCard();
+                best.cost = Double.MAX_VALUE;
+                best.card = Integer.MAX_VALUE;
+                best.plan = null;
+
+                for (LogicalJoinNode node : set) {
+                    CostCard costcard = computeCostAndCardOfSubplan(stats, filterSelectivities, node, set,
+                            Double.MAX_VALUE, optjoin);
+
+                    if (costcard != null && costcard.cost < best.cost) {
+                        best = costcard;
+                    }
+                }
+                optjoin.addPlan(set, best.cost, best.card, best.plan);
+            }
+
+        }
+
+        if (explain) {
+            this.printJoins(this.joins, optjoin, stats, filterSelectivities);
+        }
+
+        return optjoin.getOrder(joinSet);
     }
 
     // ===================== Private Methods =================================

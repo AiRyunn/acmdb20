@@ -33,8 +33,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
      *             if a temporary file can't be created to hand to HeapFile to
      *             open and read its data
      */
-    public static HeapFile createDuplicateHeapFile(
-            ArrayList<ArrayList<Integer>> tuples, int columns, String colPrefix)
+    public static HeapFile createDuplicateHeapFile(ArrayList<ArrayList<Integer>> tuples, int columns, String colPrefix)
             throws IOException {
         File temp = File.createTempFile("table", ".dat");
         temp.deleteOnExit();
@@ -62,8 +61,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         super.setUp();
         // Create some sample tables to work with
         this.tuples1 = new ArrayList<ArrayList<Integer>>();
-        this.f1 = SystemTestUtil.createRandomHeapFile(10, 1000, 20, null,
-                tuples1, "c");
+        this.f1 = SystemTestUtil.createRandomHeapFile(10, 1000, 20, null, tuples1, "c");
 
         this.tableName1 = "TA";
         Database.getCatalog().addTable(f1, tableName1);
@@ -74,8 +72,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         TableStats.setTableStats(tableName1, stats1);
 
         this.tuples2 = new ArrayList<ArrayList<Integer>>();
-        this.f2 = SystemTestUtil.createRandomHeapFile(10, 10000, 20, null,
-                tuples2, "c");
+        this.f2 = SystemTestUtil.createRandomHeapFile(10, 10000, 20, null, tuples2, "c");
 
         this.tableName2 = "TB";
         Database.getCatalog().addTable(f2, tableName2);
@@ -87,12 +84,11 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         TableStats.setTableStats(tableName2, stats2);
     }
 
-    private double[] getRandomJoinCosts(JoinOptimizer jo, LogicalJoinNode js,
-            int[] card1s, int[] card2s, double[] cost1s, double[] cost2s) {
+    private double[] getRandomJoinCosts(JoinOptimizer jo, LogicalJoinNode js, int[] card1s, int[] card2s,
+            double[] cost1s, double[] cost2s) {
         double[] ret = new double[card1s.length];
         for (int i = 0; i < card1s.length; ++i) {
-            ret[i] = jo.estimateJoinCost(js, card1s[i], card2s[i], cost1s[i],
-                    cost2s[i]);
+            ret[i] = jo.estimateJoinCost(js, card1s[i], card2s[i], cost1s[i], cost2s[i]);
             // assert that he join cost is no less than the total cost of
             // scanning two tables
             Assert.assertTrue(ret[i] > cost1s[i] + cost2s[i]);
@@ -114,39 +110,41 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         TransactionId tid = new TransactionId();
         JoinOptimizer jo;
         Parser p = new Parser();
-        jo = new JoinOptimizer(p.generateLogicalPlan(tid, "SELECT * FROM "
-                + tableName1 + " t1, " + tableName2
-                + " t2 WHERE t1.c1 = t2.c2;"), new Vector<LogicalJoinNode>());
+        jo = new JoinOptimizer(
+                p.generateLogicalPlan(tid,
+                        "SELECT * FROM " + tableName1 + " t1, " + tableName2 + " t2 WHERE t1.c1 = t2.c2;"),
+                new Vector<LogicalJoinNode>());
         // 1 join 2
-        LogicalJoinNode equalsJoinNode = new LogicalJoinNode(tableName1,
-                tableName2, Integer.toString(1), Integer.toString(2),
-                Predicate.Op.EQUALS);
+        LogicalJoinNode equalsJoinNode = new LogicalJoinNode(tableName1, tableName2, Integer.toString(1),
+                Integer.toString(2), Predicate.Op.EQUALS);
         checkJoinEstimateCosts(jo, equalsJoinNode);
         // 2 join 1
-        jo = new JoinOptimizer(p.generateLogicalPlan(tid, "SELECT * FROM "
-                + tableName1 + " t1, " + tableName2
-                + " t2 WHERE t1.c1 = t2.c2;"), new Vector<LogicalJoinNode>());
-        equalsJoinNode = new LogicalJoinNode(tableName2, tableName1,
-                Integer.toString(2), Integer.toString(1), Predicate.Op.EQUALS);
+        jo = new JoinOptimizer(
+                p.generateLogicalPlan(tid,
+                        "SELECT * FROM " + tableName1 + " t1, " + tableName2 + " t2 WHERE t1.c1 = t2.c2;"),
+                new Vector<LogicalJoinNode>());
+        equalsJoinNode = new LogicalJoinNode(tableName2, tableName1, Integer.toString(2), Integer.toString(1),
+                Predicate.Op.EQUALS);
         checkJoinEstimateCosts(jo, equalsJoinNode);
         // 1 join 1
-        jo = new JoinOptimizer(p.generateLogicalPlan(tid, "SELECT * FROM "
-                + tableName1 + " t1, " + tableName1
-                + " t2 WHERE t1.c3 = t2.c4;"), new Vector<LogicalJoinNode>());
-        equalsJoinNode = new LogicalJoinNode(tableName1, tableName1,
-                Integer.toString(3), Integer.toString(4), Predicate.Op.EQUALS);
+        jo = new JoinOptimizer(
+                p.generateLogicalPlan(tid,
+                        "SELECT * FROM " + tableName1 + " t1, " + tableName1 + " t2 WHERE t1.c3 = t2.c4;"),
+                new Vector<LogicalJoinNode>());
+        equalsJoinNode = new LogicalJoinNode(tableName1, tableName1, Integer.toString(3), Integer.toString(4),
+                Predicate.Op.EQUALS);
         checkJoinEstimateCosts(jo, equalsJoinNode);
         // 2 join 2
-        jo = new JoinOptimizer(p.generateLogicalPlan(tid, "SELECT * FROM "
-                + tableName2 + " t1, " + tableName2
-                + " t2 WHERE t1.c8 = t2.c7;"), new Vector<LogicalJoinNode>());
-        equalsJoinNode = new LogicalJoinNode(tableName2, tableName2,
-                Integer.toString(8), Integer.toString(7), Predicate.Op.EQUALS);
+        jo = new JoinOptimizer(
+                p.generateLogicalPlan(tid,
+                        "SELECT * FROM " + tableName2 + " t1, " + tableName2 + " t2 WHERE t1.c8 = t2.c7;"),
+                new Vector<LogicalJoinNode>());
+        equalsJoinNode = new LogicalJoinNode(tableName2, tableName2, Integer.toString(8), Integer.toString(7),
+                Predicate.Op.EQUALS);
         checkJoinEstimateCosts(jo, equalsJoinNode);
     }
 
-    private void checkJoinEstimateCosts(JoinOptimizer jo,
-            LogicalJoinNode equalsJoinNode) {
+    private void checkJoinEstimateCosts(JoinOptimizer jo, LogicalJoinNode equalsJoinNode) {
         int card1s[] = new int[20];
         int card2s[] = new int[card1s.length];
         double cost1s[] = new double[card1s.length];
@@ -158,8 +156,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
             card2s[i] = 5;
             cost1s[i] = cost2s[i] = 5.0;
         }
-        double stats[] = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s,
-                cost1s, cost2s);
+        double stats[] = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s, cost2s);
         ret = SystemTestUtil.checkLinear(stats);
         Assert.assertEquals(Boolean.TRUE, ret[0]);
         // card2s linear others constant
@@ -168,8 +165,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
             card2s[i] = 3 * i + 1;
             cost1s[i] = cost2s[i] = 5.0;
         }
-        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s,
-                cost2s);
+        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s, cost2s);
         ret = SystemTestUtil.checkLinear(stats);
         Assert.assertEquals(Boolean.TRUE, ret[0]);
         // cost1s linear others constant
@@ -178,8 +174,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
             cost1s[i] = 5.0 * (i + 1);
             cost2s[i] = 3.0;
         }
-        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s,
-                cost2s);
+        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s, cost2s);
         ret = SystemTestUtil.checkLinear(stats);
         Assert.assertEquals(Boolean.TRUE, ret[0]);
         // cost2s linear others constant
@@ -188,8 +183,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
             cost1s[i] = 5.0;
             cost2s[i] = 3.0 * (i + 1);
         }
-        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s,
-                cost2s);
+        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s, cost2s);
         ret = SystemTestUtil.checkLinear(stats);
         Assert.assertEquals(Boolean.TRUE, ret[0]);
         // everything linear
@@ -199,8 +193,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
             cost1s[i] = 5.0 * i + 2;
             cost2s[i] = 3.0 * i + 1;
         }
-        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s,
-                cost2s);
+        stats = getRandomJoinCosts(jo, equalsJoinNode, card1s, card2s, cost1s, cost2s);
         ret = SystemTestUtil.checkQuadratic(stats);
         Assert.assertEquals(Boolean.TRUE, ret[0]);
     }
@@ -213,9 +206,9 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
     public void estimateJoinCardinality() throws ParsingException {
         TransactionId tid = new TransactionId();
         Parser p = new Parser();
-        JoinOptimizer j = new JoinOptimizer(p.generateLogicalPlan(tid,
-                "SELECT * FROM " + tableName2 + " t1, " + tableName2
-                        + " t2 WHERE t1.c8 = t2.c7;"),
+        JoinOptimizer j = new JoinOptimizer(
+                p.generateLogicalPlan(tid,
+                        "SELECT * FROM " + tableName2 + " t1, " + tableName2 + " t2 WHERE t1.c8 = t2.c7;"),
                 new Vector<LogicalJoinNode>());
 
         double cardinality;
@@ -244,11 +237,11 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
          * <= 2000);
          */
 
-        cardinality = j.estimateJoinCardinality(new LogicalJoinNode("t1", "t2",
-                "c" + Integer.toString(3), "c" + Integer.toString(4),
-                Predicate.Op.EQUALS), stats1.estimateTableCardinality(0.8),
-                stats2.estimateTableCardinality(0.2), true, false, TableStats
-                        .getStatsMap());
+        cardinality = j.estimateJoinCardinality(
+                new LogicalJoinNode("t1", "t2", "c" + Integer.toString(3), "c" + Integer.toString(4),
+                        Predicate.Op.EQUALS),
+                stats1.estimateTableCardinality(0.8), stats2.estimateTableCardinality(0.2), true, false,
+                TableStats.getStatsMap());
 
         // On a primary key, the cardinality is well-defined and exact (should
         // be size of fk table)
@@ -256,11 +249,11 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         // table, so accept either
         Assert.assertTrue(cardinality == 800 || cardinality == 2000);
 
-        cardinality = j.estimateJoinCardinality(new LogicalJoinNode("t1", "t2",
-                "c" + Integer.toString(3), "c" + Integer.toString(4),
-                Predicate.Op.EQUALS), stats1.estimateTableCardinality(0.8),
-                stats2.estimateTableCardinality(0.2), false, true, TableStats
-                        .getStatsMap());
+        cardinality = j.estimateJoinCardinality(
+                new LogicalJoinNode("t1", "t2", "c" + Integer.toString(3), "c" + Integer.toString(4),
+                        Predicate.Op.EQUALS),
+                stats1.estimateTableCardinality(0.8), stats2.estimateTableCardinality(0.2), false, true,
+                TableStats.getStatsMap());
 
         Assert.assertTrue(cardinality == 800 || cardinality == 2000);
     }
@@ -270,8 +263,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
      * of ordering joins, and not taking an unreasonable amount of time to do so
      */
     @Test
-    public void orderJoinsTest() throws ParsingException, IOException,
-            DbException, TransactionAbortedException {
+    public void orderJoinsTest() throws ParsingException, IOException, DbException, TransactionAbortedException {
         // This test is intended to approximate the join described in the
         // "Query Planning" section of 2009 Quiz 1,
         // though with some minor variation due to limitations in simpledb
@@ -290,37 +282,26 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
 
         // Create all of the tables, and add them to the catalog
         ArrayList<ArrayList<Integer>> empTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile emp = SystemTestUtil.createRandomHeapFile(6, 100000, null,
-                empTuples, "c");
+        HeapFile emp = SystemTestUtil.createRandomHeapFile(6, 100000, null, empTuples, "c");
         Database.getCatalog().addTable(emp, "emp");
 
         ArrayList<ArrayList<Integer>> deptTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile dept = SystemTestUtil.createRandomHeapFile(3, 1000, null,
-                deptTuples, "c");
+        HeapFile dept = SystemTestUtil.createRandomHeapFile(3, 1000, null, deptTuples, "c");
         Database.getCatalog().addTable(dept, "dept");
 
         ArrayList<ArrayList<Integer>> hobbyTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile hobby = SystemTestUtil.createRandomHeapFile(6, 1000, null,
-                hobbyTuples, "c");
+        HeapFile hobby = SystemTestUtil.createRandomHeapFile(6, 1000, null, hobbyTuples, "c");
         Database.getCatalog().addTable(hobby, "hobby");
 
         ArrayList<ArrayList<Integer>> hobbiesTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile hobbies = SystemTestUtil.createRandomHeapFile(2, 200000, null,
-                hobbiesTuples, "c");
+        HeapFile hobbies = SystemTestUtil.createRandomHeapFile(2, 200000, null, hobbiesTuples, "c");
         Database.getCatalog().addTable(hobbies, "hobbies");
 
         // Get TableStats objects for each of the tables that we just generated.
-        stats.put("emp", new TableStats(
-                Database.getCatalog().getTableId("emp"), IO_COST));
-        stats.put("dept",
-                new TableStats(Database.getCatalog().getTableId("dept"),
-                        IO_COST));
-        stats.put("hobby",
-                new TableStats(Database.getCatalog().getTableId("hobby"),
-                        IO_COST));
-        stats.put("hobbies",
-                new TableStats(Database.getCatalog().getTableId("hobbies"),
-                        IO_COST));
+        stats.put("emp", new TableStats(Database.getCatalog().getTableId("emp"), IO_COST));
+        stats.put("dept", new TableStats(Database.getCatalog().getTableId("dept"), IO_COST));
+        stats.put("hobby", new TableStats(Database.getCatalog().getTableId("hobby"), IO_COST));
+        stats.put("hobbies", new TableStats(Database.getCatalog().getTableId("hobbies"), IO_COST));
 
         // Note that your code shouldn't re-compute selectivities.
         // If you get statistics numbers, even if they're wrong (which they are
@@ -339,17 +320,12 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         // the same order as they were written in the query.
         // They just have to be in an order that uses the same operators and
         // semantically means the same thing.
-        nodes.add(new LogicalJoinNode("hobbies", "hobby", "c1", "c0",
-                Predicate.Op.EQUALS));
-        nodes.add(new LogicalJoinNode("emp", "dept", "c1", "c0",
-                Predicate.Op.EQUALS));
-        nodes.add(new LogicalJoinNode("emp", "hobbies", "c2", "c0",
-                Predicate.Op.EQUALS));
+        nodes.add(new LogicalJoinNode("hobbies", "hobby", "c1", "c0", Predicate.Op.EQUALS));
+        nodes.add(new LogicalJoinNode("emp", "dept", "c1", "c0", Predicate.Op.EQUALS));
+        nodes.add(new LogicalJoinNode("emp", "hobbies", "c2", "c0", Predicate.Op.EQUALS));
         Parser p = new Parser();
-        j = new JoinOptimizer(
-                p.generateLogicalPlan(
-                        tid,
-                        "SELECT * FROM emp,dept,hobbies,hobby WHERE emp.c1 = dept.c0 AND hobbies.c0 = emp.c2 AND hobbies.c1 = hobby.c0 AND e.c3 < 1000;"),
+        j = new JoinOptimizer(p.generateLogicalPlan(tid,
+                "SELECT * FROM emp,dept,hobbies,hobby WHERE emp.c1 = dept.c0 AND hobbies.c0 = emp.c2 AND hobbies.c1 = hobby.c0 AND e.c3 < 1000;"),
                 nodes);
 
         // Set the last boolean here to 'true' in order to have orderJoins()
@@ -381,8 +357,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
      * reasonable amount of time
      */
     @Test(timeout = 60000)
-    public void bigOrderJoinsTest() throws IOException, DbException,
-            TransactionAbortedException, ParsingException {
+    public void bigOrderJoinsTest() throws IOException, DbException, TransactionAbortedException, ParsingException {
         final int IO_COST = 103;
 
         JoinOptimizer j;
@@ -394,41 +369,27 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
 
         // Create a large set of tables, and add tuples to the tables
         ArrayList<ArrayList<Integer>> smallHeapFileTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile smallHeapFileA = SystemTestUtil.createRandomHeapFile(2, 100,
-                Integer.MAX_VALUE, null, smallHeapFileTuples, "c");
-        HeapFile smallHeapFileB = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileC = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileD = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileE = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileF = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileG = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileH = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileI = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileJ = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileK = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileL = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileM = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileN = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
+        HeapFile smallHeapFileA = SystemTestUtil.createRandomHeapFile(2, 100, Integer.MAX_VALUE, null,
+                smallHeapFileTuples, "c");
+        HeapFile smallHeapFileB = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileC = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileD = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileE = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileF = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileG = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileH = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileI = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileJ = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileK = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileL = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileM = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileN = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
 
         ArrayList<ArrayList<Integer>> bigHeapFileTuples = new ArrayList<ArrayList<Integer>>();
         for (int i = 0; i < 100000; i++) {
             bigHeapFileTuples.add(smallHeapFileTuples.get(i % 100));
         }
-        HeapFile bigHeapFile = createDuplicateHeapFile(bigHeapFileTuples, 2,
-                "c");
+        HeapFile bigHeapFile = createDuplicateHeapFile(bigHeapFileTuples, 2, "c");
         Database.getCatalog().addTable(bigHeapFile, "bigTable");
 
         // Add the tables to the database
@@ -496,16 +457,13 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         nodes.add(new LogicalJoinNode("k", "l", "c1", "c1", Predicate.Op.EQUALS));
         nodes.add(new LogicalJoinNode("l", "m", "c0", "c0", Predicate.Op.EQUALS));
         nodes.add(new LogicalJoinNode("m", "n", "c1", "c1", Predicate.Op.EQUALS));
-        nodes.add(new LogicalJoinNode("n", "bigTable", "c0", "c0",
-                Predicate.Op.EQUALS));
+        nodes.add(new LogicalJoinNode("n", "bigTable", "c0", "c0", Predicate.Op.EQUALS));
 
         // Make sure we don't give the nodes to the optimizer in a nice order
         Collections.shuffle(nodes);
         Parser p = new Parser();
-        j = new JoinOptimizer(
-                p.generateLogicalPlan(
-                        tid,
-                        "SELECT COUNT(a.c0) FROM bigTable, a, b, c, d, e, f, g, h, i, j, k, l, m, n WHERE bigTable.c0 = n.c0 AND a.c1 = b.c1 AND b.c0 = c.c0 AND c.c1 = d.c1 AND d.c0 = e.c0 AND e.c1 = f.c1 AND f.c0 = g.c0 AND g.c1 = h.c1 AND h.c0 = i.c0 AND i.c1 = j.c1 AND j.c0 = k.c0 AND k.c1 = l.c1 AND l.c0 = m.c0 AND m.c1 = n.c1;"),
+        j = new JoinOptimizer(p.generateLogicalPlan(tid,
+                "SELECT COUNT(a.c0) FROM bigTable, a, b, c, d, e, f, g, h, i, j, k, l, m, n WHERE bigTable.c0 = n.c0 AND a.c1 = b.c1 AND b.c0 = c.c0 AND c.c1 = d.c1 AND d.c0 = e.c0 AND e.c1 = f.c1 AND f.c0 = g.c0 AND g.c1 = h.c1 AND h.c0 = i.c0 AND i.c1 = j.c1 AND j.c0 = k.c0 AND k.c1 = l.c1 AND l.c0 = m.c0 AND m.c1 = n.c1;"),
                 nodes);
 
         // Set the last boolean here to 'true' in order to have orderJoins()
@@ -525,8 +483,8 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
      * put as the innermost join
      */
     @Test
-    public void nonequalityOrderJoinsTest() throws IOException, DbException,
-            TransactionAbortedException, ParsingException {
+    public void nonequalityOrderJoinsTest()
+            throws IOException, DbException, TransactionAbortedException, ParsingException {
         final int IO_COST = 103;
 
         JoinOptimizer j;
@@ -538,24 +496,16 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
 
         // Create a large set of tables, and add tuples to the tables
         ArrayList<ArrayList<Integer>> smallHeapFileTuples = new ArrayList<ArrayList<Integer>>();
-        HeapFile smallHeapFileA = SystemTestUtil.createRandomHeapFile(2, 100,
-                Integer.MAX_VALUE, null, smallHeapFileTuples, "c");
-        HeapFile smallHeapFileB = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileC = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileD = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileE = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileF = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileG = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileH = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
-        HeapFile smallHeapFileI = createDuplicateHeapFile(smallHeapFileTuples,
-                2, "c");
+        HeapFile smallHeapFileA = SystemTestUtil.createRandomHeapFile(2, 100, Integer.MAX_VALUE, null,
+                smallHeapFileTuples, "c");
+        HeapFile smallHeapFileB = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileC = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileD = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileE = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileF = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileG = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileH = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
+        HeapFile smallHeapFileI = createDuplicateHeapFile(smallHeapFileTuples, 2, "c");
 
         // Add the tables to the database
         Database.getCatalog().addTable(smallHeapFileA, "a");
@@ -591,8 +541,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         filterSelectivities.put("i", 1.0);
 
         // Add the nodes to a collection for a query plan
-        nodes.add(new LogicalJoinNode("a", "b", "c1", "c1",
-                Predicate.Op.LESS_THAN));
+        nodes.add(new LogicalJoinNode("a", "b", "c1", "c1", Predicate.Op.LESS_THAN));
         nodes.add(new LogicalJoinNode("b", "c", "c0", "c0", Predicate.Op.EQUALS));
         nodes.add(new LogicalJoinNode("c", "d", "c1", "c1", Predicate.Op.EQUALS));
         nodes.add(new LogicalJoinNode("d", "e", "c0", "c0", Predicate.Op.EQUALS));
@@ -603,10 +552,8 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
 
         Parser p = new Parser();
         // Run the optimizer; see what results we get back
-        j = new JoinOptimizer(
-                p.generateLogicalPlan(
-                        tid,
-                        "SELECT COUNT(a.c0) FROM a, b, c, d,e,f,g,h,i WHERE a.c1 < b.c1 AND b.c0 = c.c0 AND c.c1 = d.c1 AND d.c0 = e.c0 AND e.c1 = f.c1 AND f.c0 = g.c0 AND g.c1 = h.c1 AND h.c0 = i.c0;"),
+        j = new JoinOptimizer(p.generateLogicalPlan(tid,
+                "SELECT COUNT(a.c0) FROM a, b, c, d,e,f,g,h,i WHERE a.c1 < b.c1 AND b.c0 = c.c0 AND c.c1 = d.c1 AND d.c0 = e.c0 AND e.c1 = f.c1 AND f.c0 = g.c0 AND g.c1 = h.c1 AND h.c0 = i.c0;"),
                 nodes);
 
         // Set the last boolean here to 'true' in order to have orderJoins()
@@ -618,7 +565,7 @@ public class JoinOptimizerTest extends SimpleDbTestBase {
         Assert.assertEquals(result.size(), nodes.size());
 
         // Make sure that "a" is the outermost table in the join
-        Assert.assertTrue(result.get(result.size() - 1).t2Alias.equals("a")
-                || result.get(result.size() - 1).t1Alias.equals("a"));
+        Assert.assertTrue(
+                result.get(result.size() - 1).t2Alias.equals("a") || result.get(result.size() - 1).t1Alias.equals("a"));
     }
 }

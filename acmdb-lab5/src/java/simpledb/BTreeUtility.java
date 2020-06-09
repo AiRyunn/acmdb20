@@ -526,6 +526,7 @@ public class BTreeUtility {
                 while (c < count) {
                     Tuple t = BTreeUtility.getBTreeTuple(item, 2);
                     Database.getBufferPool().insertTuple(tid, bf.getId(), t);
+                    System.out.println("insertTuple: " + t.getField(0));
 
                     IndexPredicate ipred = new IndexPredicate(Op.EQUALS, t.getField(bf.keyField()));
                     DbFileIterator it = bf.indexIterator(tid, ipred);

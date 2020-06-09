@@ -84,6 +84,16 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        PageId pid = page.getId();
+        try {
+            RandomAccessFile f = new RandomAccessFile(this.file, "rw");
+            int offset = BufferPool.getPageSize() * pid.pageNumber();
+            f.seek(offset);
+            f.write(page.getPageData());
+            f.close();
+        } catch (IOException e) {
+            throw new IllegalArgumentException();
+        }
     }
 
     /**
@@ -189,16 +199,16 @@ public class HeapFile implements DbFile {
     private HeapPage getPage(TransactionId tid, Permissions perm) throws TransactionAbortedException, DbException {
         for (int i = 0; i < this.numPages(); i++) {
             PageId pid = new HeapPageId(this.getId(), i);
-            HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, perm);
+            HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY);
             if (page.getNumEmptySlots() > 0) {
-                return page;
+                return (HeapPage) Database.getBufferPool().getPage(tid, pid, perm);
             }
         }
         return null;
     }
 
     private HeapPage getEmptyPage(TransactionId tid) throws DbException, IOException, TransactionAbortedException {
-        HeapPageId id = new HeapPageId(this.getId(), this.numPages());
+        HeapPageId pid = new HeapPageId(this.getId(), this.numPages());
         byte[] data = HeapPage.createEmptyPageData();
 
         RandomAccessFile raf = new RandomAccessFile(this.file, "rw");
@@ -206,7 +216,7 @@ public class HeapFile implements DbFile {
         raf.write(data);
         raf.close();
 
-        Database.getBufferPool().discardPage(id);
+        Database.getBufferPool().discardPage(pid);
 
         return getPage(tid, Permissions.READ_WRITE);
     }

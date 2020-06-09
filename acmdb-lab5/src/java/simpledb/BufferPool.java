@@ -50,6 +50,7 @@ public class BufferPool {
 
     private final ArrayList<PageWithPriority> pages;
     private final int numPages;
+    private final TransactionLockManager lockManager;
 
     /** Default number of pages passed to the constructor. This is used by
     other classes. BufferPool should use the numPages argument to the
@@ -65,6 +66,7 @@ public class BufferPool {
         // some code goes here
         this.pages = new ArrayList<PageWithPriority>();
         this.numPages = numPages;
+        this.lockManager = new TransactionLockManager();
     }
 
     public static int getPageSize() {
@@ -98,6 +100,7 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
+        this.lockManager.acquireLock(tid, pid, perm);
         PageWithPriority p = findPage(pid);
         if (p != null) {
             return p.page;
@@ -107,7 +110,7 @@ public class BufferPool {
         }
         DbFile dbfile = Database.getCatalog().getDatabaseFile(pid.getTableId());
         Page page = dbfile.readPage(pid);
-        this.addPage(pid, page);
+        this.addPage(page);
         return page;
     }
 
@@ -123,6 +126,7 @@ public class BufferPool {
     public void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        this.lockManager.releasePage(tid, pid);
     }
 
     /**
@@ -133,13 +137,14 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        this.transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return this.lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -152,6 +157,30 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        if (commit) {
+            for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
+                PageWithPriority p = findPage(pid);
+                if (p != null) {
+                    Page page = p.page;
+                    if (tid.equals(page.isDirty())) {
+                        flushPage(page);
+                        page.setBeforeImage();
+                    }
+                }
+            }
+        } else {
+            for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
+                PageWithPriority p = findPage(pid);
+                if (p != null) {
+                    Page page = p.page;
+                    if (tid.equals(page.isDirty())) {
+                        abortPage(page);
+                    }
+                }
+            }
+        }
+
+        this.lockManager.releasePages(tid);
     }
 
     /**
@@ -176,8 +205,7 @@ public class BufferPool {
         DbFile file = Database.getCatalog().getDatabaseFile(tableId);
         ArrayList<Page> pageList = file.insertTuple(tid, t);
         for (Page page : pageList) {
-            PageId pid = page.getId();
-            this.addPage(pid, page);
+            this.addPage(page);
             page.markDirty(true, tid);
         }
     }
@@ -201,8 +229,7 @@ public class BufferPool {
         DbFile file = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
         ArrayList<Page> pageList = file.deleteTuple(tid, t);
         for (Page page : pageList) {
-            PageId pid = page.getId();
-            addPage(pid, page);
+            addPage(page);
             page.markDirty(true, tid);
         }
     }
@@ -216,14 +243,16 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         for (PageWithPriority p : this.pages) {
-            flushPage(p.pid);
+            flushPage(p.page);
         }
     }
 
-    private synchronized void addPage(PageId pid, Page page) {
+    private synchronized void addPage(Page page) {
+        PageId pid = page.getId();
         PageWithPriority p = findPage(pid);
         if (p != null) {
-            p.flush();
+            // FIXME
+            // p.flush();
         } else {
             this.pages.add(new PageWithPriority(page, pid));
         }
@@ -247,15 +276,25 @@ public class BufferPool {
      * Flushes a certain page to disk
      * @param pid an ID indicating the page to flush
      */
-    private synchronized void flushPage(PageId pid) throws IOException {
+    private synchronized void flushDirtyPage(Page page, TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1
-        Page page = findPage(pid).page;
-        TransactionId id = page.isDirty();
-        if (id != null) {
-            DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
-            dbFile.writePage(page);
-            page.markDirty(false, id);
+        PageId pid = page.getId();
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
+        dbFile.writePage(page);
+        page.markDirty(false, tid);
+    }
+
+    /**
+     * Flushes a certain page to disk
+     * @param pid an ID indicating the page to flush
+     */
+    private synchronized void flushPage(Page page) throws IOException {
+        // some code goes here
+        // not necessary for lab1
+        TransactionId tid = page.isDirty();
+        if (tid != null) {
+            flushDirtyPage(page, tid);
         }
     }
 
@@ -264,6 +303,29 @@ public class BufferPool {
     public synchronized void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        for (PageWithPriority p : pages) {
+            Page page = p.page;
+            TransactionId dirtyId = page.isDirty();
+            if (dirtyId != null && dirtyId.equals(tid)) {
+                flushDirtyPage(page, tid);
+            }
+        }
+    }
+
+    /**
+     * Flushes a certain page to disk
+     * @param pid an ID indicating the page to flush
+     */
+    private synchronized void abortPage(Page page) throws IOException {
+        // some code goes here
+        // not necessary for lab1
+        PageId pid = page.getId();
+        TransactionId tid = page.isDirty();
+        if (tid != null) {
+            discardPage(pid);
+            pages.add(new PageWithPriority(page.getBeforeImage(), pid));
+            page.markDirty(false, tid);
+        }
     }
 
     /**
@@ -289,12 +351,13 @@ public class BufferPool {
         assert flushPage != null;
 
         if (flushPage == null) {
-            flushPage = dirtyPage;
-            try {
-                flushPage(dirtyPage.pid);
-            } catch (Exception e) {
-                throw new DbException("unable to evice page");
-            }
+            throw new DbException("unable to evice page since all pages in the buffer pool are dirty");
+            // flushPage = dirtyPage;
+            // try {
+            //     flushPage(dirtyPage.pid);
+            // } catch (Exception e) {
+            //     throw new DbException("unable to evice page");
+            // }
         }
 
         assert flushPage != null;

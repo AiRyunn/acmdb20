@@ -199,10 +199,10 @@ public class BTreeFile implements DbFile {
         for (Iterator<BTreeEntry> it = page.iterator(); it.hasNext();) {
             entry = it.next();
             if (f == null || f.compare(Op.LESS_THAN_OR_EQ, entry.getKey())) {
-                return findLeafPage(tid, dirtypages, entry.getLeftChild(), Permissions.READ_ONLY, f);
+                return findLeafPage(tid, dirtypages, entry.getLeftChild(), perm, f);
             }
         }
-        return findLeafPage(tid, dirtypages, entry.getRightChild(), Permissions.READ_ONLY, f);
+        return findLeafPage(tid, dirtypages, entry.getRightChild(), perm, f);
     }
 
     /**

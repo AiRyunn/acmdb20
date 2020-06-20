@@ -44,6 +44,7 @@ public class IndexPredicate implements Serializable {
     */
     public boolean equals(IndexPredicate ipd) {
         // some code goes here
+        assert false;
         return false;
     }
 

@@ -493,7 +493,6 @@ public class BTreeFile implements DbFile {
                     Permissions.READ_WRITE);
             rootPtr.setRootId(rootId);
         }
-
         // find and lock the left-most leaf page corresponding to the key field,
         // and split the leaf page if there are no more slots available
         BTreeLeafPage leafPage = findLeafPage(tid, dirtypages, rootId, Permissions.READ_WRITE, t.getField(keyField));
@@ -1333,7 +1332,6 @@ class BTreeSearchIterator extends AbstractDbFileIterator {
     @Override
     protected Tuple readNext() throws TransactionAbortedException, DbException, NoSuchElementException {
         while (it != null) {
-
             while (it.hasNext()) {
                 Tuple t = it.next();
                 if (t.getField(f.keyField()).compare(ipred.getOp(), ipred.getField())) {

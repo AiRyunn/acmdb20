@@ -239,11 +239,15 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        if (constant.getType() == Type.INT_TYPE) {
-            return this.intHists.get(field).estimateSelectivity(op, ((IntField) constant).getValue());
-        } else {
-            return this.stringHists.get(field).estimateSelectivity(op, ((StringField) constant).getValue());
+        switch (constant.getType()) {
+            case INT_TYPE:
+                return this.intHists.get(field).estimateSelectivity(op, ((IntField) constant).getValue());
+            case STRING_TYPE:
+                return this.stringHists.get(field).estimateSelectivity(op, ((StringField) constant).getValue());
+            default:
+                assert false;
         }
+        return 0.0;
     }
 
     /**

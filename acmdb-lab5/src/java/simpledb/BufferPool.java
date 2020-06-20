@@ -2,6 +2,9 @@ package simpledb;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -15,25 +18,26 @@ import java.util.ArrayList;
  * @Threadsafe, all fields are final
  */
 public class BufferPool {
-    private static int timestamp = 0;
+    private static AtomicLong counter = new AtomicLong(0);
+    Random random;
 
     private class PageWithPriority implements Comparable<PageWithPriority> {
         private final Page page;
         private final PageId pid;
-        private Integer priority;
+        private Long priority;
 
         private PageWithPriority(Page page, PageId pid) {
             this.page = page;
             this.pid = pid;
-            this.priority = timestamp++;
+            this.priority = counter.getAndIncrement();
         }
 
-        private Integer getPriority() {
+        private Long getPriority() {
             return priority;
         }
 
         private void flush() {
-            this.priority = timestamp++;
+            this.priority = counter.getAndIncrement();
         }
 
         @Override
@@ -50,7 +54,7 @@ public class BufferPool {
 
     private final ArrayList<PageWithPriority> pages;
     private final int numPages;
-    private final TransactionLockManager lockManager;
+    private final LockManager lockManager;
 
     /** Default number of pages passed to the constructor. This is used by
     other classes. BufferPool should use the numPages argument to the
@@ -66,7 +70,8 @@ public class BufferPool {
         // some code goes here
         this.pages = new ArrayList<PageWithPriority>();
         this.numPages = numPages;
-        this.lockManager = new TransactionLockManager();
+        this.lockManager = new LockManager();
+        random = new Random();
     }
 
     public static int getPageSize() {
@@ -98,11 +103,44 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public synchronized Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        this.lockManager.acquireLock(tid, pid, perm);
+        // DEBUG
+        // if (perm == Permissions.READ_WRITE) {
+        //     System.out.println("rw: " + tid.getId());
+        // } else {
+        //     System.out.println("r: " + tid.getId());
+        // }
+        int cnt = 0;
+        while (!lockManager.getLock(tid, pid, perm)) {
+            // if (perm == Permissions.READ_WRITE) {
+            //     System.out.println("rw wait: " + tid.getId());
+            // } else {
+            //     System.out.println("r wait: " + tid.getId());
+            // }
+            try {
+                int t = random.nextInt(100) + 50;
+                wait(t);
+                cnt += t;
+            } catch (InterruptedException e) {
+            }
+            if (cnt > 400) {
+                if (lockManager.getLevel(pid) < tid.hashCode()) {
+                    System.out.println("timeout: " + tid.getId());
+                    // assert false;
+                    throw new TransactionAbortedException();
+                }
+            }
+        }
+        // if (perm == Permissions.READ_WRITE) {
+        //     System.out.println("rw get: " + tid.getId());
+        // } else {
+        //     System.out.println("r get: " + tid.getId());
+        // }
+        // this.lockManager.acquireLock(tid, pid, perm);
         PageWithPriority p = findPage(pid);
         if (p != null) {
+            p.flush();
             return p.page;
         }
         if (pages.size() >= numPages) {
@@ -126,7 +164,8 @@ public class BufferPool {
     public void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
-        this.lockManager.releasePage(tid, pid);
+        // this.lockManager.releasePage(tid, pid);
+        lockManager.removeTriple(new Triple(tid, pid, Permissions.READ_WRITE));
     }
 
     /**
@@ -134,7 +173,7 @@ public class BufferPool {
      *
      * @param tid the ID of the transaction requesting the unlock
      */
-    public void transactionComplete(TransactionId tid) throws IOException {
+    public synchronized void transactionComplete(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
         this.transactionComplete(tid, true);
@@ -144,7 +183,8 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return this.lockManager.holdsLock(tid, p);
+        // return this.lockManager.holdsLock(tid, p);
+        return lockManager.getTriple(tid, p) != null;
     }
 
     /**
@@ -154,33 +194,59 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      * @param commit a flag indicating whether we should commit or abort
      */
-    public void transactionComplete(TransactionId tid, boolean commit) throws IOException {
+    public synchronized void transactionComplete(TransactionId tid, boolean commit) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
-        if (commit) {
-            for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
-                PageWithPriority p = findPage(pid);
-                if (p != null) {
-                    Page page = p.page;
-                    if (tid.equals(page.isDirty())) {
-                        flushPage(page);
-                        page.setBeforeImage();
-                    }
-                }
-            }
-        } else {
-            for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
-                PageWithPriority p = findPage(pid);
-                if (p != null) {
-                    Page page = p.page;
-                    if (tid.equals(page.isDirty())) {
-                        abortPage(page);
-                    }
-                }
-            }
-        }
+        // if (commit) {
+        //     for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
+        //         PageWithPriority p = findPage(pid);
+        //         if (p != null) {
+        //             Page page = p.page;
+        //             if (tid.equals(page.isDirty())) {
+        //                 flushPage(page);
+        //                 page.setBeforeImage();
+        //             }
+        //         }
+        //     }
+        // } else {
+        //     for (PageId pid : this.lockManager.getPagesInTransaction(tid)) {
+        //         PageWithPriority p = findPage(pid);
+        //         if (p != null) {
+        //             Page page = p.page;
+        //             if (tid.equals(page.isDirty())) {
+        //                 abortPage(page);
+        //             }
+        //         }
+        //     }
+        // }
 
-        this.lockManager.releasePages(tid);
+        // this.lockManager.releasePages(tid);
+
+        ArrayList<Triple> arrayList = (ArrayList<Triple>) lockManager.getByTid(tid).clone();
+        if (commit) {
+            flushPages(tid);
+            lockManager.last = tid.myid;
+        } else {
+            ArrayList<Page> trash = new ArrayList<Page>();
+            for (PageWithPriority p : pages) {
+                Page page = p.page;
+                TransactionId dirtyId = page.isDirty();
+                Triple triple = lockManager.getTriple(tid, page.getId());
+                if (triple == null) {
+                    continue;
+                }
+                if ((dirtyId != null && dirtyId.equals(tid)) || triple.perm.equals(Permissions.READ_WRITE)) {
+                    trash.add(page);
+                }
+            }
+            for (Page page : trash) {
+                pages.remove(findPage(page.getId()));
+            }
+
+        }
+        for (Triple triple : arrayList) {
+            lockManager.removeTriple(triple);
+        }
     }
 
     /**
@@ -198,7 +264,7 @@ public class BufferPool {
      * @param tableId the table to add the tuple to
      * @param t the tuple to add
      */
-    public void insertTuple(TransactionId tid, int tableId, Tuple t)
+    public synchronized void insertTuple(TransactionId tid, int tableId, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
@@ -223,7 +289,8 @@ public class BufferPool {
      * @param tid the transaction deleting the tuple.
      * @param t the tuple to delete
      */
-    public void deleteTuple(TransactionId tid, Tuple t) throws DbException, IOException, TransactionAbortedException {
+    public synchronized void deleteTuple(TransactionId tid, Tuple t)
+            throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
         DbFile file = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
@@ -243,7 +310,7 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         for (PageWithPriority p : this.pages) {
-            flushPage(p.page);
+            this.flushPage(p.page);
         }
     }
 
@@ -252,7 +319,7 @@ public class BufferPool {
         PageWithPriority p = findPage(pid);
         if (p != null) {
             // FIXME
-            // p.flush();
+            p.flush();
         } else {
             this.pages.add(new PageWithPriority(page, pid));
         }
@@ -347,9 +414,6 @@ public class BufferPool {
             }
         }
 
-        // NOTE: assert for test
-        assert flushPage != null;
-
         if (flushPage == null) {
             throw new DbException("unable to evice page since all pages in the buffer pool are dirty");
             // flushPage = dirtyPage;
@@ -372,5 +436,142 @@ public class BufferPool {
             }
         }
         return null;
+    }
+}
+
+class Triple {
+    public TransactionId tid;
+    public PageId pid;
+    public Permissions perm;
+
+    public Triple(TransactionId tid, PageId pid, Permissions perm) {
+        this.tid = tid;
+        this.pid = pid;
+        this.perm = perm;
+    }
+
+    public int hashCode() {
+        return (tid.hashCode() << 16) ^ pid.hashCode();
+    }
+
+    public boolean equals(Object o) {
+        if (o == null)
+            return false;
+        if (o instanceof Triple) {
+            return tid.equals(((Triple) o).tid) && pid.equals(((Triple) o).pid) && perm.equals(((Triple) o).perm);
+        }
+        return false;
+    }
+}
+
+enum PageStatus {
+    NONE, ONE_READ, ONE_WRITE, MULTI_READ
+}
+
+class LockManager {
+    public long last;
+    private ConcurrentHashMap<TransactionId, ArrayList<Triple>> usedPageMap;
+    private ConcurrentHashMap<PageId, ArrayList<Triple>> belongMap;
+
+    public LockManager() {
+        last = -1;
+        usedPageMap = new ConcurrentHashMap<TransactionId, ArrayList<Triple>>();
+        belongMap = new ConcurrentHashMap<PageId, ArrayList<Triple>>();
+    }
+
+    synchronized ArrayList<Triple> getByPid(PageId pid) {
+        ArrayList<Triple> arrayList = belongMap.get(pid);
+        if (arrayList == null)
+            belongMap.put(pid, new ArrayList<Triple>());
+        return belongMap.get(pid);
+    }
+
+    synchronized ArrayList<Triple> getByTid(TransactionId tid) {
+        ArrayList<Triple> arrayList = usedPageMap.get(tid);
+        if (arrayList == null)
+            usedPageMap.put(tid, new ArrayList<Triple>());
+        return usedPageMap.get(tid);
+    }
+
+    synchronized Triple getTriple(TransactionId tid, PageId pid) {
+        ArrayList<Triple> arrayList = getByPid(pid);
+        for (Triple triple : arrayList) {
+            if (triple.tid.equals(tid))
+                return triple;
+        }
+        return null;
+    }
+
+    synchronized void removeTriple(Triple triple) {
+        getByPid(triple.pid).remove(triple);
+        getByTid(triple.tid).remove(triple);
+    }
+
+    synchronized void updateTriple(Triple triple) {
+        removeTriple(new Triple(triple.tid, triple.pid, Permissions.READ_ONLY));
+        removeTriple(new Triple(triple.tid, triple.pid, Permissions.READ_WRITE));
+        getByPid(triple.pid).add(triple);
+        getByTid(triple.tid).add(triple);
+    }
+
+    synchronized PageStatus getPageStatus(PageId pid) {
+        ArrayList<Triple> arrayList = getByPid(pid);
+        if (arrayList.size() == 1) {
+            if (arrayList.get(0).perm.equals(Permissions.READ_ONLY))
+                return PageStatus.ONE_READ;
+            return PageStatus.ONE_WRITE;
+        }
+        if (arrayList.size() > 1) {
+            return PageStatus.MULTI_READ;
+        }
+        return PageStatus.NONE;
+    }
+
+    public synchronized boolean getLock(TransactionId tid, PageId pid, Permissions perm) {
+        //assume all READ_WRITE
+
+        PageStatus pageStatus = getPageStatus(pid);
+        ArrayList<Triple> arrayList = getByPid(pid);
+        Triple triple = new Triple(tid, pid, perm);
+        if (pageStatus == PageStatus.NONE) {
+            updateTriple(triple);
+            return true;
+        }
+        if (pageStatus == PageStatus.ONE_READ) {
+            if (arrayList.get(0).tid.equals(tid)) {
+                updateTriple(triple);
+                return true;
+            } else {
+                if (perm.equals(Permissions.READ_WRITE))
+                    return false;
+                updateTriple(triple);
+                return true;
+            }
+        }
+        if (pageStatus == PageStatus.ONE_WRITE) {
+            return arrayList.get(0).tid.equals(tid);
+        }
+        if (pageStatus == PageStatus.MULTI_READ) {
+            if (perm.equals(Permissions.READ_ONLY)) {
+                updateTriple(triple);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    public synchronized int getLevel(PageId pid) {
+
+        ArrayList<Triple> arrayList = getByPid(pid);
+
+        int level = 100000000;
+        for (Triple triple : arrayList) {
+            level = Math.min(level, triple.tid.hashCode());
+        }
+
+        return level;
     }
 }

@@ -1,48 +1,43 @@
 package simpledb;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Set;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Stack;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.HashMap;
 
-public class TransactionLockManager {
+class TransactionLockManager {
     private final ConcurrentMap<PageId, Object> locks;
-    private final ConcurrentMap<PageId, List<TransactionId>> sharedLocks;
+    private final ConcurrentMap<PageId, Set<TransactionId>> sharedLocks;
     private final ConcurrentMap<PageId, TransactionId> exclusiveLocks;
     private final ConcurrentMap<TransactionId, Set<PageId>> pageIdsLockedByTransaction;
     private final ConcurrentMap<TransactionId, Set<TransactionId>> dependencyGraph;
 
     public TransactionLockManager() {
-        this.locks = new ConcurrentHashMap<PageId, Object>();
-        this.sharedLocks = new ConcurrentHashMap<PageId, List<TransactionId>>();
-        this.exclusiveLocks = new ConcurrentHashMap<PageId, TransactionId>();
-        this.pageIdsLockedByTransaction = new ConcurrentHashMap<TransactionId, Set<PageId>>();
-        this.dependencyGraph = new ConcurrentHashMap<TransactionId, Set<TransactionId>>();
+        locks = new ConcurrentHashMap<PageId, Object>();
+        sharedLocks = new ConcurrentHashMap<PageId, Set<TransactionId>>();
+        exclusiveLocks = new ConcurrentHashMap<PageId, TransactionId>();
+        pageIdsLockedByTransaction = new ConcurrentHashMap<TransactionId, Set<PageId>>();
+        dependencyGraph = new ConcurrentHashMap<TransactionId, Set<TransactionId>>();
     }
 
     public Set<PageId> getPagesInTransaction(TransactionId tid) {
-        Set<PageId> pages = this.pageIdsLockedByTransaction.get(tid);
+        Set<PageId> pages = pageIdsLockedByTransaction.get(tid);
         if (pages == null) {
             pages = new HashSet<PageId>();
         }
         return pages;
     }
 
-    public void acquireLock(TransactionId tid, PageId pid, Permissions permissions) throws TransactionAbortedException {
-        if (permissions == Permissions.READ_ONLY) {
+    public void acquireLock(TransactionId tid, PageId pid, Permissions perm) throws TransactionAbortedException {
+        if (perm == Permissions.READ_ONLY) {
             if (hasReadPermissions(tid, pid)) {
                 return;
             }
             acquireReadOnlyLock(tid, pid);
-        } else if (permissions == Permissions.READ_WRITE) {
+        } else if (perm == Permissions.READ_WRITE) {
             if (hasWritePermissions(tid, pid)) {
                 return;
             }
@@ -53,20 +48,21 @@ public class TransactionLockManager {
         addPageToTransactionLocks(tid, pid);
     }
 
-    public void releasePage(TransactionId tid, PageId pid) {
-        releaseLock(tid, pid);
-        if (pageIdsLockedByTransaction.containsKey(tid)) {
-            pageIdsLockedByTransaction.get(tid).remove(pid);
+    public synchronized void releasePage(TransactionId tid, PageId pid) {
+        Set<PageId> pids = pageIdsLockedByTransaction.get(tid);
+        if (pids != null) {
+            releaseLock(tid, pid);
+            pids.remove(pid);
         }
     }
 
-    public void releasePages(TransactionId transactionId) {
-        if (pageIdsLockedByTransaction.containsKey(transactionId)) {
-            Set<PageId> pageIds = pageIdsLockedByTransaction.get(transactionId);
-            for (PageId pageId : pageIds) {
-                releaseLock(transactionId, pageId);
+    public synchronized void releasePages(TransactionId tid) {
+        Set<PageId> pids = pageIdsLockedByTransaction.get(tid);
+        if (pids != null) {
+            for (PageId pid : pids) {
+                releaseLock(tid, pid);
             }
-            pageIdsLockedByTransaction.replace(transactionId, new HashSet<PageId>());
+            pageIdsLockedByTransaction.remove(tid);
         }
     }
 
@@ -76,66 +72,67 @@ public class TransactionLockManager {
     }
 
     public boolean holdsLock(TransactionId tid, PageId pid) {
-        if (!pageIdsLockedByTransaction.containsKey(tid)) {
-            return false;
-        }
-        return pageIdsLockedByTransaction.get(tid).contains(pid);
+        Set<PageId> pids = pageIdsLockedByTransaction.get(tid);
+        return pids != null && pids.contains(pid);
     }
 
     private void releaseLock(TransactionId tid, PageId pid) {
         Object lock = getLock(pid);
         synchronized (lock) {
             exclusiveLocks.remove(pid);
-            if (sharedLocks.containsKey(pid)) {
-                sharedLocks.get(pid).remove(tid);
+            Set<TransactionId> tids = sharedLocks.get(pid);
+            if (tids != null) {
+                tids.remove(tid);
             }
         }
     }
 
     private void addSharedUser(TransactionId tid, PageId pid) {
-        if (!sharedLocks.containsKey(pid)) {
-            sharedLocks.put(pid, new ArrayList<TransactionId>());
+        Set<TransactionId> tids = sharedLocks.get(pid);
+        if (tids == null) {
+            tids = new HashSet<TransactionId>();
+            sharedLocks.put(pid, tids);
         }
-        sharedLocks.get(pid).add(tid);
+        tids.add(tid);
     }
 
     private boolean hasReadPermissions(TransactionId tid, PageId pid) {
         if (hasWritePermissions(tid, pid)) {
             return true;
         }
-        List<TransactionId> tids = sharedLocks.get(pid);
+        Set<TransactionId> tids = sharedLocks.get(pid);
         return tids != null && tids.contains(tid);
     }
 
-    private boolean hasWritePermissions(TransactionId tid, PageId pid) {
+    public boolean hasWritePermissions(TransactionId tid, PageId pid) {
         TransactionId tid2 = exclusiveLocks.get(pid);
         return tid2 != null && tid2.equals(tid);
     }
 
-    private boolean acquireReadOnlyLock(TransactionId tid, PageId pid) throws TransactionAbortedException {
+    private void acquireReadOnlyLock(TransactionId tid, PageId pid) throws TransactionAbortedException {
         Object lock = getLock(pid);
         while (true) {
             synchronized (lock) {
                 TransactionId exclusiveLockHolder = exclusiveLocks.get(pid);
                 if (exclusiveLockHolder == null || tid.equals(exclusiveLockHolder)) {
-                    removeDependencies(tid);
+                    removeDependency(tid);
                     addSharedUser(tid, pid);
-                    return true;
+                    return;
                 }
                 addDependency(tid, exclusiveLockHolder);
             }
         }
     }
 
-    private boolean acquireReadWriteLock(TransactionId tid, PageId pid) throws TransactionAbortedException {
+    private void acquireReadWriteLock(TransactionId tid, PageId pid) throws TransactionAbortedException {
         Object lock = getLock(pid);
         while (true) {
             synchronized (lock) {
-                List<TransactionId> lockHolders = getLockHolders(pid);
+                Set<TransactionId> lockHolders = getLockHolders(pid);
                 if (!isLockedByOthers(tid, lockHolders)) {
-                    removeDependencies(tid);
+                    removeDependency(tid);
                     addExclusiveUser(tid, pid);
-                    return true;
+                    return;
                 }
                 addDependencies(tid, lockHolders);
             }
@@ -143,11 +140,15 @@ public class TransactionLockManager {
     }
 
     private void addPageToTransactionLocks(TransactionId tid, PageId pid) {
-        pageIdsLockedByTransaction.putIfAbsent(tid, new HashSet<PageId>());
-        pageIdsLockedByTransaction.get(tid).add(pid);
+        Set<PageId> pids = pageIdsLockedByTransaction.get(tid);
+        if (pids == null) {
+            pids = new HashSet<PageId>();
+            pageIdsLockedByTransaction.put(tid, pids);
+        }
+        pids.add(pid);
     }
 
-    private boolean isLockedByOthers(TransactionId transactionId, List<TransactionId> lockHolders) {
+    private boolean isLockedByOthers(TransactionId transactionId, Set<TransactionId> lockHolders) {
         if (lockHolders == null || lockHolders.isEmpty()) {
             return false;
         }
@@ -157,72 +158,69 @@ public class TransactionLockManager {
         return true;
     }
 
-    private List<TransactionId> getLockHolders(PageId pid) {
-        List<TransactionId> lockHolders = new ArrayList<TransactionId>();
-        if (exclusiveLocks.containsKey(pid)) {
-            lockHolders.add(exclusiveLocks.get(pid));
-            return lockHolders;
+    private Set<TransactionId> getLockHolders(PageId pid) {
+        TransactionId tid = exclusiveLocks.get(pid);
+        if (tid != null) {
+            return new HashSet<TransactionId>(Arrays.asList(tid));
         }
-        if (sharedLocks.containsKey(pid)) {
-            lockHolders.addAll(sharedLocks.get(pid));
-        }
-        return lockHolders;
+
+        Set<TransactionId> lockHolders = sharedLocks.get(pid);
+        return lockHolders == null ? new HashSet<TransactionId>() : lockHolders;
     }
 
     private void addExclusiveUser(TransactionId tid, PageId pid) {
         exclusiveLocks.put(pid, tid);
+        sharedLocks.remove(pid);
     }
 
-    private void removeDependencies(TransactionId dependent) {
+    enum VisitState {
+        Visited, Visiting
+    }
+
+    private void removeDependency(TransactionId dependent) {
         dependencyGraph.remove(dependent);
     }
 
-    private void testForDeadlock(TransactionId tid, Set<TransactionId> visitedTransactionIds,
-            Stack<TransactionId> parents) throws TransactionAbortedException {
-        visitedTransactionIds.add(tid);
+    private void testForDeadlock(TransactionId tid, Map<TransactionId, VisitState> visitedTransactionIds)
+            throws TransactionAbortedException {
+        visitedTransactionIds.put(tid, VisitState.Visiting);
         if (!dependencyGraph.containsKey(tid)) {
             return;
         }
         for (TransactionId dependee : dependencyGraph.get(tid)) {
-            if (parents.contains(dependee)) {
+            VisitState state = visitedTransactionIds.get(dependee);
+            if (state == VisitState.Visiting) {
                 throw new TransactionAbortedException();
-            }
-            if (!visitedTransactionIds.contains(dependee)) {
-                parents.push(tid);
-                testForDeadlock(dependee, visitedTransactionIds, parents);
-                parents.pop();
+            } else if (state == null) {
+                testForDeadlock(dependee, visitedTransactionIds);
             }
         }
+        visitedTransactionIds.put(tid, VisitState.Visited);
     }
 
-    private void abortIfDeadlocked() throws TransactionAbortedException {
-        // System.exit(-1);
-        Set<TransactionId> visitedTransactionIds = new HashSet<TransactionId>();
-        for (TransactionId tid : dependencyGraph.keySet()) {
-            if (!visitedTransactionIds.contains(tid)) {
-                testForDeadlock(tid, visitedTransactionIds, new Stack<TransactionId>());
-            }
-        }
+    private void abortIfDeadlocked(TransactionId dependent) throws TransactionAbortedException {
+        Map<TransactionId, VisitState> visitedTransactionIds = new HashMap<TransactionId, VisitState>();
+        testForDeadlock(dependent, visitedTransactionIds);
     }
 
     private void addDependency(TransactionId dependent, TransactionId dependee) throws TransactionAbortedException {
-        addDependencies(dependent, Arrays.asList(dependee));
+        addDependencies(dependent, new HashSet<TransactionId>(Arrays.asList(dependee)));
     }
 
-    private void addDependencies(TransactionId dependent, List<TransactionId> dependees)
+    private void addDependencies(TransactionId dependent, Set<TransactionId> dependees)
             throws TransactionAbortedException {
-        // dependencyGraph.put(dependent, new HashSet<TransactionId>());
         dependencyGraph.putIfAbsent(dependent, new HashSet<TransactionId>());
         Set<TransactionId> dependeesCollection = dependencyGraph.get(dependent);
         boolean addedDependee = false;
-        for (TransactionId newDependee : dependees) {
-            if (!dependeesCollection.contains(newDependee) && !newDependee.equals(dependent)) {
+        for (TransactionId dependee : dependees) {
+            if (!dependeesCollection.contains(dependee) && !dependee.equals(dependent)) {
                 addedDependee = true;
-                dependeesCollection.add(newDependee);
+                dependeesCollection.add(dependee);
             }
         }
         if (addedDependee) {
-            abortIfDeadlocked();
+            abortIfDeadlocked(dependent);
         }
     }
+
 }

@@ -364,13 +364,6 @@ public class BTreeUtility {
                 pid.getTableId(), childPageCategory, minKey, maxKey, minChildPtr), BufferPool.getPageSize(),
                 Type.INT_TYPE, childPageCategory);
         BTreeInternalPage page = new BTreeInternalPage(pid, data, keyField);
-        // System.out.println(keyField);
-        // System.out.println(childPageCategory);
-        // System.out.println(numKeys);
-        // System.out.println(minKey);
-        // System.out.println(maxKey);
-        // System.out.println(page.getNumEmptySlots());
-        // assert false;
         return page;
     }
 

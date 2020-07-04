@@ -19,14 +19,16 @@ public class BTreeLeafPage extends BTreePage {
     private int leftSibling; // leaf node or 0
     private int rightSibling; // leaf node or 0
 
-    public void checkRep(int fieldid, Field lowerBound, Field upperBound, boolean checkoccupancy, int depth) {
+    public void checkRep(int fieldid, Field lowerBound, Field upperBound, boolean checkoccupancy,
+            int depth) {
         Field prev = lowerBound;
         assert (this.getId().pgcateg() == BTreePageId.LEAF);
 
         Iterator<Tuple> it = this.iterator();
         while (it.hasNext()) {
             Tuple t = it.next();
-            assert (null == prev || prev.compare(Predicate.Op.LESS_THAN_OR_EQ, t.getField(fieldid)));
+            assert (null == prev
+                    || prev.compare(Predicate.Op.LESS_THAN_OR_EQ, t.getField(fieldid)));
             prev = t.getField(fieldid);
             assert (t.getRecordId().getPageId().equals(this.getId()));
         }
@@ -113,7 +115,8 @@ public class BTreeLeafPage extends BTreePage {
         int bitsPerTupleIncludingHeader = td.getSize() * 8 + 1;
         // extraBits are: left sibling pointer, right sibling pointer, parent pointer
         int extraBits = 3 * INDEX_SIZE * 8;
-        int tuplesPerPage = (BufferPool.getPageSize() * 8 - extraBits) / bitsPerTupleIncludingHeader; //round down
+        int tuplesPerPage =
+                (BufferPool.getPageSize() * 8 - extraBits) / bitsPerTupleIncludingHeader; //round down
         return tuplesPerPage;
     }
 
@@ -261,7 +264,8 @@ public class BTreeLeafPage extends BTreePage {
         }
 
         // padding
-        int zerolen = BufferPool.getPageSize() - (header.length + td.getSize() * tuples.length + 3 * INDEX_SIZE); //- numSlots * td.getSize();
+        int zerolen = BufferPool.getPageSize()
+                - (header.length + td.getSize() * tuples.length + 3 * INDEX_SIZE); //- numSlots * td.getSize();
         byte[] zeroes = new byte[zerolen];
         try {
             dos.write(zeroes, 0, zerolen);
@@ -290,7 +294,8 @@ public class BTreeLeafPage extends BTreePage {
         if (rid == null) {
             throw new DbException("tried to delete tuple with null rid");
         }
-        if ((rid.getPageId().pageNumber() != pid.pageNumber()) || (rid.getPageId().getTableId() != pid.getTableId())) {
+        if ((rid.getPageId().pageNumber() != pid.pageNumber())
+                || (rid.getPageId().getTableId() != pid.getTableId())) {
             throw new DbException("tried to delete tuple on invalid page or table");
         }
         if (!isSlotUsed(rid.tupleno())) {
@@ -353,8 +358,8 @@ public class BTreeLeafPage extends BTreePage {
 
         // insert new record into the correct spot in sorted order
         markSlotUsed(goodSlot, true);
-        Debug.log(1, "BTreeLeafPage.insertTuple: new tuple, tableId = %d pageId = %d slotId = %d", pid.getTableId(),
-                pid.pageNumber(), goodSlot);
+        Debug.log(1, "BTreeLeafPage.insertTuple: new tuple, tableId = %d pageId = %d slotId = %d",
+                pid.getTableId(), pid.pageNumber(), goodSlot);
         RecordId rid = new RecordId(pid, goodSlot);
         t.setRecordId(rid);
         tuples[goodSlot] = t;
@@ -504,8 +509,8 @@ public class BTreeLeafPage extends BTreePage {
 
         try {
             if (!isSlotUsed(i)) {
-                Debug.log(1, "BTreeLeafPage.getTuple: slot %d in %d:%d is not used", i, pid.getTableId(),
-                        pid.pageNumber());
+                Debug.log(1, "BTreeLeafPage.getTuple: slot %d in %d:%d is not used", i,
+                        pid.getTableId(), pid.pageNumber());
                 return null;
             }
 
@@ -528,6 +533,7 @@ public class BTreeLeafPage extends BTreePage {
     //     }
     // }
 }
+
 
 /**
  * Helper class that implements the Java Iterator for tuples on a BTreeLeafPage.
@@ -576,6 +582,7 @@ class BTreeLeafPageIterator implements Iterator<Tuple> {
         throw new UnsupportedOperationException();
     }
 }
+
 
 /**
  * Helper class that implements the Java Iterator for tuples on a BTreeLeafPage in reverse.

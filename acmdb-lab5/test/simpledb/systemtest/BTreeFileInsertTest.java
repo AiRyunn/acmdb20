@@ -1,6 +1,5 @@
 package simpledb.systemtest;
 
-import simpledb.systemtest.SimpleDbTestBase;
 import simpledb.Predicate.Op;
 import simpledb.*;
 

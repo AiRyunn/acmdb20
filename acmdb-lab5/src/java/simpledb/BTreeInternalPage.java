@@ -107,8 +107,6 @@ public class BTreeInternalPage extends BTreePage {
             e.printStackTrace();
         }
         dis.close();
-        // System.out.println(getNumEmptySlots());
-        // assert false;
 
         setBeforeImage();
     }

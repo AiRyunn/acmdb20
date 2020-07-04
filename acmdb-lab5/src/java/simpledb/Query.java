@@ -50,8 +50,7 @@ public class Query implements Serializable {
         tid = t;
     }
 
-    public void start() throws IOException, DbException,
-            TransactionAbortedException {
+    public void start() throws IOException, DbException, TransactionAbortedException {
         op.open();
 
         started = true;
@@ -78,8 +77,7 @@ public class Query implements Serializable {
      * @throws TransactionAbortedException
      *             If the transaction is aborted (e.g., due to a deadlock)
      */
-    public Tuple next() throws DbException, NoSuchElementException,
-            TransactionAbortedException {
+    public Tuple next() throws DbException, NoSuchElementException, TransactionAbortedException {
         if (!started)
             throw new DbException("Database not started.");
 

@@ -167,9 +167,8 @@ public class HeapFile implements DbFile {
 
                 HeapPageId currentPageId = new HeapPageId(heapFile.getId(), currentPageNumber);
 
-                // FIXME: permission
                 HeapPage currentPage = (HeapPage) Database.getBufferPool().getPage(tid, currentPageId,
-                        Permissions.READ_WRITE);
+                        Permissions.READ_ONLY);
                 tupleIt = currentPage.iterator();
 
                 if (!tupleIt.hasNext()) {

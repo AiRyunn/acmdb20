@@ -23,13 +23,11 @@ public class Project extends Operator {
      * @param child
      *            The child operator
      */
-    public Project(ArrayList<Integer> fieldList, ArrayList<Type> typesList,
-            DbIterator child) {
-        this(fieldList,typesList.toArray(new Type[]{}),child);
+    public Project(ArrayList<Integer> fieldList, ArrayList<Type> typesList, DbIterator child) {
+        this(fieldList, typesList.toArray(new Type[] {}), child);
     }
-    
-    public Project(ArrayList<Integer> fieldList, Type[] types,
-            DbIterator child) {
+
+    public Project(ArrayList<Integer> fieldList, Type[] types, DbIterator child) {
         this.child = child;
         outFieldIds = fieldList;
         String[] fieldAr = new String[fieldList.size()];
@@ -45,8 +43,7 @@ public class Project extends Operator {
         return td;
     }
 
-    public void open() throws DbException, NoSuchElementException,
-            TransactionAbortedException {
+    public void open() throws DbException, NoSuchElementException, TransactionAbortedException {
         child.open();
         super.open();
     }
@@ -66,8 +63,7 @@ public class Project extends Operator {
      * 
      * @return The next tuple, or null if there are no more tuples
      */
-    protected Tuple fetchNext() throws NoSuchElementException,
-            TransactionAbortedException, DbException {
+    protected Tuple fetchNext() throws NoSuchElementException, TransactionAbortedException, DbException {
         while (child.hasNext()) {
             Tuple t = child.next();
             Tuple newTuple = new Tuple(td);
@@ -87,10 +83,9 @@ public class Project extends Operator {
 
     @Override
     public void setChildren(DbIterator[] children) {
-	if (this.child!=children[0])
-	{
-	    this.child = children[0];
-	}
+        if (this.child != children[0]) {
+            this.child = children[0];
+        }
     }
-    
+
 }

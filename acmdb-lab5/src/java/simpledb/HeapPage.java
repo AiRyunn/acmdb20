@@ -22,7 +22,7 @@ public class HeapPage implements Page {
     final int numSlots;
 
     byte[] oldData;
-    private final Byte oldDataLock = new Byte((byte) 0);
+    private final Byte oldDataLock = Byte.valueOf((byte) 0);
 
     /**
      * Create a HeapPage from a set of bytes of data read from disk.
@@ -80,7 +80,7 @@ public class HeapPage implements Page {
      */
     private int getHeaderSize() {
         // some code goes here
-        return (this.getNumTuples() + 7) / 8;
+        return (getNumTuples() + 7) / 8;
     }
 
     /** Return a view of this page before it was modified
@@ -111,7 +111,7 @@ public class HeapPage implements Page {
      */
     public HeapPageId getId() {
         // some code goes here
-        return this.pid;
+        return pid;
     }
 
     /**
@@ -251,12 +251,12 @@ public class HeapPage implements Page {
 
         int tupleno = rid.tupleno();
 
-        if (!(this.isSlotUsed(tupleno))) {
+        if (!(isSlotUsed(tupleno))) {
             throw new DbException("tuple slot is already empty");
         }
 
         this.tuples[tupleno] = null;
-        this.markSlotUsed(tupleno, false);
+        markSlotUsed(tupleno, false);
     }
 
     /**
@@ -273,7 +273,7 @@ public class HeapPage implements Page {
             throw new DbException("tupledesc is mismatch");
         }
         int slot = 0;
-        while (this.isSlotUsed(slot)) {
+        while (isSlotUsed(slot)) {
             slot++;
         }
 
@@ -282,7 +282,7 @@ public class HeapPage implements Page {
         }
 
         this.tuples[slot] = t;
-        this.markSlotUsed(slot, true);
+        markSlotUsed(slot, true);
         t.setRecordId(new RecordId(this.pid, slot));
     }
 
@@ -318,8 +318,8 @@ public class HeapPage implements Page {
     public int getNumEmptySlots() {
         // some code goes here
         int count = 0;
-        for (int i = 0; i < this.getNumTuples(); i++) {
-            if (!this.isSlotUsed(i)) {
+        for (int i = 0; i < getNumTuples(); i++) {
+            if (!isSlotUsed(i)) {
                 count++;
             }
         }

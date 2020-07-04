@@ -240,7 +240,6 @@ public class JoinOptimizer {
         //Not necessary for labs 1--3
 
         // some code goes here
-        //Replace the following
         Set<LogicalJoinNode> joinSet = new HashSet<LogicalJoinNode>();
         joinSet.addAll(this.joins);
         Set<Set<LogicalJoinNode>> sets = enumerateSubsets(this.joins, 1);
@@ -248,10 +247,7 @@ public class JoinOptimizer {
 
         for (int i = 1; i <= sets.size(); i++) {
             for (Set<LogicalJoinNode> set : this.enumerateSubsets(joins, i)) {
-                CostCard best = new CostCard();
-                best.cost = Double.MAX_VALUE;
-                best.card = Integer.MAX_VALUE;
-                best.plan = null;
+                CostCard best = new CostCard(Double.MAX_VALUE, Integer.MAX_VALUE, null);
 
                 for (LogicalJoinNode node : set) {
                     CostCard costcard = computeCostAndCardOfSubplan(stats, filterSelectivities, node, set,

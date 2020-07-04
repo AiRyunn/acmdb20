@@ -22,7 +22,7 @@ public abstract class BTreePage implements Page {
 
     protected int parent; // parent is always internal node or 0 for root node
     protected byte[] oldData;
-    protected final Byte oldDataLock = new Byte((byte) 0);
+    protected final Byte oldDataLock = Byte.valueOf((byte) 0);
 
     /**
      * Create a BTreeInternalPage from a set of bytes of data read from disk.
@@ -114,18 +114,20 @@ public abstract class BTreePage implements Page {
      */
     public void markDirty(boolean dirty, TransactionId tid) {
         this.dirty = dirty;
-        if (dirty)
+        if (dirty) {
             this.dirtier = tid;
+        }
     }
 
     /**
      * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
      */
     public TransactionId isDirty() {
-        if (this.dirty)
+        if (this.dirty) {
             return this.dirtier;
-        else
+        } else {
             return null;
+        }
     }
 
     /**

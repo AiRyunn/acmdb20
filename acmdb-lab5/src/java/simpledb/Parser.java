@@ -272,7 +272,7 @@ public class Parser {
                 m.invoke(null, (Operator) physicalPlan, lp.getTableAliasToIdMapping(), TableStats.getStatsMap());
                 c = Class.forName("simpledb.QueryPlanVisualizer");
                 m = c.getMethod("printQueryPlanTree", DbIterator.class, System.out.getClass());
-                m.invoke(c.newInstance(), physicalPlan, System.out);
+                m.invoke(c.getDeclaredConstructor().newInstance(), physicalPlan, System.out);
             } catch (ClassNotFoundException e) {
             } catch (SecurityException e) {
             } catch (NoSuchMethodException e) {
@@ -328,7 +328,7 @@ public class Parser {
                         throw new simpledb.ParsingException(
                                 "Value " + zc.getValue() + " is not an integer, expected a string.");
                     }
-                    IntField f = new IntField(new Integer(zc.getValue()));
+                    IntField f = new IntField(Integer.parseInt(zc.getValue()));
                     t.setField(i, f);
                 } else if (zc.getType() == ZConstant.STRING) {
                     if (td.getFieldType(i) != Type.STRING_TYPE) {

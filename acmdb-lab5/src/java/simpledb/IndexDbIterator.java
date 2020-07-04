@@ -1,4 +1,5 @@
 package simpledb;
+
 import java.util.*;
 
 /** IndexDBIterator is the interface that index access methods
@@ -9,12 +10,10 @@ public interface IndexDbIterator extends DbIterator {
         iterates through the tuples that satisfy ipred.
         @param ipred The predicate that is used to scan the index.
     */
-    public void open(IndexPredicate ipred)
-        throws NoSuchElementException, DbException, TransactionAbortedException;
+    public void open(IndexPredicate ipred) throws NoSuchElementException, DbException, TransactionAbortedException;
 
     /** Begin a new index scan with the specified predicate.
         @param ipred The predicate that is used to scan the index.
     */
-    public void rewind(IndexPredicate ipred)
-        throws DbException, TransactionAbortedException;
+    public void rewind(IndexPredicate ipred) throws DbException, TransactionAbortedException;
 }

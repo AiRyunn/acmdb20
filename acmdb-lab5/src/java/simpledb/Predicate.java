@@ -101,7 +101,6 @@ public class Predicate implements Serializable {
     public boolean filter(Tuple t) {
         // some code goes here
         if (t == null) {
-            assert false; // NOTE: assert for test
             return false;
         }
         return t.getField(field).compare(op, operand);

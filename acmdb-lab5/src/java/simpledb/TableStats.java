@@ -66,7 +66,7 @@ public class TableStats {
      * histograms.
      */
     static final int NUM_HIST_BINS = 100;
-    private final int tableid;
+    // private final int tableid;
     private final int ioCostPerPage;
     private final HeapFile file;
     private final ConcurrentHashMap<Integer, IntHistogram> intHists;
@@ -98,7 +98,7 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
-        this.tableid = tableid;
+        // this.tableid = tableid;
         this.ioCostPerPage = ioCostPerPage;
         this.nTuples = 0;
         this.file = (HeapFile) Database.getCatalog().getDatabaseFile(tableid);

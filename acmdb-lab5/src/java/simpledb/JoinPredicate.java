@@ -41,21 +41,21 @@ public class JoinPredicate implements Serializable {
      */
     public boolean filter(Tuple t1, Tuple t2) {
         // some code goes here
-        return t1.getField(this.field1).compare(this.op, t2.getField(this.field2));
+        return t1.getField(field1).compare(op, t2.getField(field2));
     }
 
     public int getField1() {
         // some code goes here
-        return this.field1;
+        return field1;
     }
 
     public int getField2() {
         // some code goes here
-        return this.field2;
+        return field2;
     }
 
     public Predicate.Op getOperator() {
         // some code goes here
-        return this.op;
+        return op;
     }
 }

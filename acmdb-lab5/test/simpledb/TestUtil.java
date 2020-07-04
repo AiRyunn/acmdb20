@@ -181,12 +181,14 @@ public class TestUtil {
             offset += count;
         }
 
-        // check that we grabbed the entire file
-        if (offset < buf.length)
-            throw new IOException("failed to read test data");
-
         // Close the input stream and return bytes
         is.close();
+
+        // check that we grabbed the entire file
+        if (offset < buf.length) {
+            throw new IOException("failed to read test data");
+        }
+
         return buf;
     }
 
@@ -244,6 +246,9 @@ public class TestUtil {
      * Mock SeqScan class for unit testing.
      */
     public static class MockScan implements DbIterator {
+
+        private static final long serialVersionUID = 1L;
+
         private int cur, low, high, width;
 
         /**
